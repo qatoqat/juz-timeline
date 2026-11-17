@@ -34,6 +34,18 @@ impl Selection {
     }
 }
 
+pub fn range_of(focus: Focus) -> (f32, f32) {
+    let m = &*crate::MUSHAF;
+    match focus {
+        Focus::Surah(i) => (m.surahs[i].start, m.surahs[i].end),
+        Focus::Juz(i) => (m.juz[i].start, m.juz[i].end),
+        Focus::Sajdah(i) => {
+            let s = &m.surahs[m.sajdah[i].surah as usize - 1];
+            (s.start, s.end)
+        }
+    }
+}
+
 pub fn ayah_pos(key: AyahKey) -> f32 {
     quran_core::model::page_pos(key.0, key.1)
 }
