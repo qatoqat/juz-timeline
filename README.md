@@ -7,8 +7,9 @@ Live: https://qatoqat.com/juz-timeline/ · Explore: https://qatoqat.com/juz-time
 ## Layout
 
 - `core` — shared mushaf data (surah, juz, page, rub', sajdah, manzil) and positions.
+- `ui` — the timeline component: rows, detail panel, search, bookmarks, done marks.
 - `timeline` — the timeline page, kept lightweight.
-- `explore` — divisions and relation datasets, the base for ring patterns, themes and links between ayat.
+- `explore` — relation datasets (similar ayah, mutashabihat, themes, topics); each opens a page built on the timeline, with ruku' marks (ع) in the detail view.
 
 Each page builds its own WebAssembly, so the explore page never adds weight to the timeline.
 
@@ -25,5 +26,5 @@ python -m http.server -d dist
 
 ## Data
 
-- Surah, juz, page, rub' and sajdah positions: [Tanzil Quran metadata](https://tanzil.net/docs/quran_metadata) (CC BY 3.0).
+- Surah, juz, page, rub', ruku' and sajdah positions: [Tanzil Quran metadata](https://tanzil.net/docs/quran_metadata) (CC BY 3.0).
 - Line positions for rub' lengths (Madani 15-line layout): [quran.com API](https://api-docs.quran.com).

@@ -1,4 +1,4 @@
-use crate::data::{FIRST_PAGE_LINES, JUZ, PAGES, RUB, RUB_LINES, SAJDAH, SURAHS};
+use crate::data::{FIRST_PAGE_LINES, JUZ, PAGES, RUB, RUB_LINES, RUKU, SAJDAH, SURAHS};
 
 pub const TOTAL_PAGES: f32 = 604.0;
 
@@ -37,6 +37,13 @@ pub struct Juz {
 }
 
 pub struct Sajdah {
+    pub surah: u8,
+    pub ayah: u16,
+    pub pos: f32,
+}
+
+pub struct Ruku {
+    pub index: usize,
     pub surah: u8,
     pub ayah: u16,
     pub pos: f32,
@@ -94,6 +101,7 @@ pub struct Mushaf {
     pub juz: Vec<Juz>,
     pub sajdah: Vec<Sajdah>,
     pub rub: Vec<Rub>,
+    pub ruku: Vec<Ruku>,
 }
 
 impl Mushaf {
@@ -132,6 +140,11 @@ impl Mushaf {
                 length: rub_length(index),
             })
             .collect();
-        Mushaf { surahs, juz, sajdah, rub }
+        let ruku = RUKU
+            .iter()
+            .enumerate()
+            .map(|(index, &(surah, ayah))| Ruku { index, surah, ayah, pos: page_pos(surah, ayah) })
+            .collect();
+        Mushaf { surahs, juz, sajdah, rub, ruku }
     }
 }

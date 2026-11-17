@@ -40,6 +40,11 @@ pub fn rub_tip(i: usize) -> String {
     )
 }
 
+pub fn ruku_tip(i: usize) -> String {
+    let r = &MUSHAF.ruku[i];
+    format!("Ruku' {} · {}:{} · page {}", i + 1, r.surah, r.ayah, r.pos.floor() as u32 + 1)
+}
+
 pub fn bookmark_tip(page: u16) -> String {
     let pos = page as f32 - 0.5;
     let m = &*MUSHAF;

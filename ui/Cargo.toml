@@ -1,0 +1,9 @@
+[package]
+name = "quran-ui"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+quran-core = { path = "../core" }
+dioxus = { workspace = true }
+web-sys = { workspace = true }

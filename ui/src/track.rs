@@ -1,6 +1,6 @@
 use crate::data::MANZIL;
 use crate::model::Rub;
-use crate::labels::{bookmark_tip, fmt_len, juz_tip, rub_tip, sajdah_tip, surah_label, Bookmark, Dome, DIGIT_PX, LABEL_PAD_PX};
+use crate::labels::{bookmark_tip, ruku_tip, fmt_len, juz_tip, rub_tip, sajdah_tip, surah_label, Bookmark, Dome, DIGIT_PX, LABEL_PAD_PX};
 use crate::menu::{open_menu, Menu, Target};
 use crate::progress::{Mark, Progress};
 use crate::{tip, Focus, MUSHAF};
@@ -96,7 +96,7 @@ fn thin<T>(items: impl Iterator<Item = (T, f32)>, min_pct: f32) -> Vec<(T, f32, 
 }
 
 #[component]
-pub fn Track(lo: f32, hi: f32, focus: Signal<Option<Focus>>, selected: Signal<Option<Focus>>, detail: bool) -> Element {
+pub fn Track(lo: f32, hi: f32, focus: Signal<Option<Focus>>, selected: Signal<Option<Focus>>, detail: bool, ruku: bool) -> Element {
     let mut width = use_signal(|| 1200.0f32);
     let m = &*MUSHAF;
     let w = width();
@@ -151,6 +151,12 @@ pub fn Track(lo: f32, hi: f32, focus: Signal<Option<Focus>>, selected: Signal<Op
         .map(|(n, &(s, c))| (n, c, m.surahs[s as usize - 1].start))
         .filter(|&(_, _, p)| p >= lo - EPS && p < hi - EPS)
         .map(|(n, c, p)| (n, c, x(p)))
+        .collect();
+    let rukus: Vec<(usize, f32)> = m
+        .ruku
+        .iter()
+        .filter(|r| ruku && r.ayah != 1 && inside(r.pos))
+        .map(|r| (r.index, x(r.pos)))
         .collect();
     let gap = MARK_GAP_PX / w * 100.0;
     let rubs: Vec<&Rub> = m.rub.iter().filter(|r| detail && overlaps((r.pos, r.end), (lo, hi))).collect();
@@ -241,6 +247,9 @@ pub fn Track(lo: f32, hi: f32, focus: Signal<Option<Focus>>, selected: Signal<Op
                         "data-tip": "{sajdah_tip(i)}",
                         Dome {}
                     }
+                }
+                for (i, px) in rukus {
+                    b { key: "r{i}", class: "rk", style: "right:{px}%", "data-tip": "{ruku_tip(i)}", "ع" }
                 }
                 for (n, c, px) in manzil.iter().copied() {
                     b {
