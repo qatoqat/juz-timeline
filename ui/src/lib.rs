@@ -1,5 +1,6 @@
 mod labels;
 mod menu;
+pub mod overlay;
 mod progress;
 mod search;
 mod track;
@@ -23,10 +24,11 @@ pub enum Focus {
 }
 
 #[component]
-pub fn Page(title: Element, ruku: bool) -> Element {
+pub fn Page(title: Element, ruku: bool, #[props(default = VNode::empty())] extra: Element) -> Element {
     let mut layout = use_signal(|| Layout::Three);
     let focus = use_signal(|| None::<Focus>);
     let selected = use_signal(|| None::<Focus>);
+    use_context_provider(|| overlay::Selection { focus, selected });
     let progress = progress::use_progress_provider();
     menu::use_menu_provider();
     use_future(move || async move {
@@ -61,7 +63,7 @@ pub fn Page(title: Element, ruku: bool) -> Element {
                     ruku: false,
                 }
             }
-            Detail { focus, selected, ruku }
+            Detail { focus, selected, ruku, extra }
             menu::ContextMenu {}
         }
     }
@@ -141,7 +143,7 @@ fn Actions() -> Element {
 }
 
 #[component]
-fn Detail(focus: Signal<Option<Focus>>, selected: Signal<Option<Focus>>, ruku: bool) -> Element {
+fn Detail(focus: Signal<Option<Focus>>, selected: Signal<Option<Focus>>, ruku: bool, extra: Element) -> Element {
     let range = selected().map(|f| match f {
         Focus::Sajdah(i) => span_of(Focus::Surah(MUSHAF.sajdah[i].surah as usize - 1)),
         _ => span_of(f),
@@ -153,6 +155,7 @@ fn Detail(focus: Signal<Option<Focus>>, selected: Signal<Option<Focus>>, ruku: b
             for (lo, hi) in range {
                 Track { key: "{lo}-{hi}", lo, hi, focus, selected, detail: true, ruku }
             }
+            {extra}
         }
     }
 }

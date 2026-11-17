@@ -8,3 +8,5 @@ quran-ui = { path = "../ui" }
 dioxus = { workspace = true }
 wasm-bindgen = { workspace = true }
 web-sys = { workspace = true }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"

@@ -1,0 +1,176 @@
+"""Build explore/assets/similar.json: shared-phrase families and close variants.
+
+Text: Tanzil (tanzil.net), "simple" for display and "simple-clean" for matching.
+Run: python tools/similar.py
+"""
+import collections
+import json
+import pathlib
+import re
+import urllib.request
+
+ROOT = pathlib.Path(__file__).resolve().parent
+CACHE = ROOT / ".cache"
+OUT = ROOT.parent / "explore" / "assets" / "similar.json"
+TANZIL = "https://tanzil.net/pub/download/index.php?quranType={}&outType=txt-2&agree=true"
+
+MIN_WORDS, MAX_WORDS = 3, 30
+MAX_MEMBERS = 12
+CUE_WORDS = 2
+COMMON_DF = 150
+RARE_DF = 40
+VARIANT_RATIO = 0.7
+VARIANT_MIN_WORDS = 4
+
+
+def load(kind):
+    path = CACHE / f"{kind}.txt"
+    if not path.exists():
+        CACHE.mkdir(exist_ok=True)
+        req = urllib.request.Request(TANZIL.format(kind), headers={"User-Agent": "juz-timeline-build"})
+        path.write_bytes(urllib.request.urlopen(req, timeout=60).read())
+    rows = [l.split("|") for l in path.read_text(encoding="utf-8").splitlines() if l.count("|") == 2]
+    return [(int(s), int(a), t.split()) for s, a, t in rows]
+
+
+def norm(w):
+    return re.sub("[أإآٱ]", "ا", w).replace("ى", "ي")
+
+
+def stem(w):
+    return w[1:] if len(w) > 3 and w[0] in "وف" else w
+
+
+def informative(g, df):
+    return len(g) > 3 or any(df[w] <= COMMON_DF for w in g)
+
+
+def phrase_families(words):
+    df = collections.Counter(w for ws in words for w in set(ws))
+    grams = {}
+    for n in range(MIN_WORDS, MAX_WORDS + 1):
+        index = collections.defaultdict(set)
+        for i, ws in enumerate(words):
+            for k in range(len(ws) - n + 1):
+                index[tuple(ws[k:k + n])].add(i)
+        grams[n] = {g: s for g, s in index.items() if len(s) >= 2}
+    maximal = {}
+    for n in range(MIN_WORDS, MAX_WORDS + 1):
+        longer = collections.defaultdict(list)
+        for g, s in grams.get(n + 1, {}).items():
+            longer[g[:-1]].append(s)
+            longer[g[1:]].append(s)
+        for g, s in grams[n].items():
+            if len(s) <= MAX_MEMBERS and informative(g, df) and not any(t == s for t in longer.get(g, [])):
+                maximal[g] = s
+    return maximal
+
+
+def find(ws, g):
+    return next(k for k in range(len(ws) - len(g) + 1) if tuple(ws[k:k + len(g)]) == g)
+
+
+def lcs(a, b):
+    row = [0] * (len(b) + 1)
+    for x in a:
+        prev = 0
+        for j, y in enumerate(b):
+            cur = row[j + 1]
+            row[j + 1] = prev + 1 if x == y else max(row[j + 1], row[j])
+            prev = cur
+    return row[-1]
+
+
+def aligned(a, b):
+    n, m = len(a), len(b)
+    t = [[0] * (m + 1) for _ in range(n + 1)]
+    for i in range(n - 1, -1, -1):
+        for j in range(m - 1, -1, -1):
+            t[i][j] = t[i + 1][j + 1] + 1 if a[i] == b[j] else max(t[i + 1][j], t[i][j + 1])
+    same_a, same_b, i, j = {}, {}, 0, 0
+    while i < n and j < m:
+        if a[i] == b[j]:
+            same_a[i] = j
+            same_b[j] = i
+            i, j = i + 1, j + 1
+        elif t[i + 1][j] >= t[i][j + 1]:
+            i += 1
+        else:
+            j += 1
+    return same_a, same_b
+
+
+def variants(words, families):
+    stems = [[stem(w) for w in ws] for ws in words]
+    df = collections.Counter(w for ws in stems for w in set(ws))
+    index = collections.defaultdict(list)
+    for i, ws in enumerate(stems):
+        for w in set(ws):
+            if df[w] <= RARE_DF:
+                index[w].append(i)
+    shared = collections.Counter()
+    for ids in index.values():
+        for x in range(len(ids)):
+            for y in range(x + 1, len(ids)):
+                shared[ids[x], ids[y]] += 1
+    covered = collections.defaultdict(int)
+    for g, s in families.items():
+        for a in s:
+            for b in s:
+                if a < b:
+                    covered[a, b] = max(covered[a, b], len(g))
+    out = []
+    for (a, b), n in shared.items():
+        la, lb = len(stems[a]), len(stems[b])
+        if n < 2 or min(la, lb) < VARIANT_MIN_WORDS or words[a] == words[b]:
+            continue
+        common = lcs(stems[a], stems[b])
+        ratio = 2 * common / (la + lb)
+        if ratio >= VARIANT_RATIO and covered[a, b] < 0.8 * common:
+            out.append((a, b, ratio))
+    return out
+
+
+def main():
+    shown = load("simple")
+    clean = load("simple-clean")
+    words = [[norm(w) for w in ws] for _, _, ws in clean]
+    keys = [[s, a] for s, a, _ in shown]
+    text = [ws for _, _, ws in shown]
+
+    families = phrase_families(words)
+    ordered = sorted(families.items(), key=lambda kv: (-len(kv[1]), -len(kv[0])))
+    out = []
+    for g, members in ordered:
+        rows = []
+        for i in sorted(members):
+            k = find(words[i], g)
+            end = k + len(g)
+            rows.append(keys[i] + [" ".join(text[i][max(0, k - CUE_WORDS):k]), " ".join(text[i][end:end + CUE_WORDS])])
+        first = min(members)
+        k = find(words[first], g)
+        out.append({"p": " ".join(text[first][k:k + len(g)]), "m": rows})
+
+    pairs = variants(words, families)
+    for a, b, ratio in sorted(pairs, key=lambda p: -p[2]):
+        same_a, same_b = aligned([stem(w) for w in words[a]], [stem(w) for w in words[b]])
+
+        def diff(i, other, same):
+            marks = []
+            for j, w in enumerate(text[i]):
+                if j not in same:
+                    marks.append("*" + w)
+                elif words[i][j] != words[other][same[j]]:
+                    marks.append("~" + w)
+                else:
+                    marks.append(w)
+            return marks
+
+        out.append({"v": round(ratio, 2), "m": [keys[a] + [diff(a, b, same_a)], keys[b] + [diff(b, a, same_b)]]})
+
+    OUT.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"{len(families)} phrase families, {len(pairs)} variants, {OUT.stat().st_size // 1024} KB")
+
+
+if __name__ == "__main__":
+    main()

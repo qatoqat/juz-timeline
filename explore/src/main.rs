@@ -1,4 +1,7 @@
+mod similar;
+
 use dioxus::prelude::*;
+use similar::SimilarAyah;
 
 const QUL: &str = "https://qul.tarteel.ai/resources";
 const API: &str = "https://api-docs.quran.com";
@@ -88,23 +91,6 @@ fn List() -> Element {
                     }
                 }
             }
-        }
-    }
-}
-
-#[component]
-fn SimilarAyah() -> Element {
-    rsx! {
-        quran_ui::Page {
-            ruku: true,
-            title: rsx! {
-                h1 {
-                    "آيات متشابهة"
-                    span { class: "sub", "Similar ayah" }
-                    a { class: "explore", href: "../", "Explore" }
-                    a { class: "explore", href: "{QUL}/similar-ayah", target: "_blank", rel: "noopener", "Source ↗" }
-                }
-            },
         }
     }
 }

@@ -26,3 +26,4 @@ page() {
 page quran-timeline dist "Juz timeline" ar
 page quran-explore dist/explore "Explore · Juz timeline" en
 html quran-explore dist/explore/similar-ayah "Similar ayah · Explore" ar ..
+cp explore/assets/similar.json dist/explore/similar-ayah/

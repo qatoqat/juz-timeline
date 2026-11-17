@@ -2,6 +2,7 @@ use crate::data::MANZIL;
 use crate::model::Rub;
 use crate::labels::{bookmark_tip, ruku_tip, fmt_len, juz_tip, rub_tip, sajdah_tip, surah_label, Bookmark, Dome, DIGIT_PX, LABEL_PAD_PX};
 use crate::menu::{open_menu, Menu, Target};
+use crate::overlay::OverlayLane;
 use crate::progress::{Mark, Progress};
 use crate::{tip, Focus, MUSHAF};
 use dioxus::prelude::*;
@@ -228,6 +229,9 @@ pub fn Track(lo: f32, hi: f32, focus: Signal<Option<Focus>>, selected: Signal<Op
                     }
                 }
             }
+            if !detail {
+                OverlayLane { lo, hi, detail: false }
+            }
             div { class: "lane sajdah",
                 for (style, thick) in ticks {
                     i { class: if thick { "bm-tick thick" } else { "bm-tick" }, style }
@@ -326,6 +330,7 @@ pub fn Track(lo: f32, hi: f32, focus: Signal<Option<Focus>>, selected: Signal<Op
                         i { class: if dotted { "line rl dotted" } else { "line rl" }, style }
                     }
                 }
+                OverlayLane { lo, hi, detail: true }
                 div { class: "lane pages",
                     span { class: "first", "{first_page}" }
                     for (p, px, show) in page_marks {
