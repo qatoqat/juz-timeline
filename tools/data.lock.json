@@ -50,5 +50,25 @@
   "themes": {
     "hash": "7a5828d727c75daf",
     "count": 1054
+  },
+  "concepts": {
+    "hash": "a0518c5f22e72d04",
+    "count": 284
+  },
+  "concept ayat": {
+    "hash": "d8030b80e572ab8e",
+    "count": 284
+  },
+  "concept links": {
+    "hash": "72b04e9921a58f2f",
+    "count": 147
+  },
+  "concept co-occurrence": {
+    "hash": "bfbc63584e40ae66",
+    "count": 300
+  },
+  "concept ayah text": {
+    "hash": "3be67ec46c4c4a19",
+    "count": 2831
   }
 }

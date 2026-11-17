@@ -5,3 +5,5 @@ __pycache__/
 /core/src/data.rs
 /explore/assets/similar.json
 /explore/assets/themes.json
+/explore/assets/topics.json
+/explore/assets/topic-ayat.json

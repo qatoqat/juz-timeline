@@ -1,15 +1,20 @@
 mod card;
+mod concept;
 mod data;
 mod nav;
+mod ontology;
 mod overview;
 mod similar;
 mod spine;
+mod spread;
 mod themes;
+mod topics;
 mod tree;
 
 use dioxus::prelude::*;
 use similar::SimilarAyah;
 use themes::ThemesPage;
+use topics::TopicsPage;
 
 const QUL: &str = "https://qul.tarteel.ai/resources";
 const API: &str = "https://api-docs.quran.com";
@@ -29,7 +34,7 @@ const RELATIONS: [Item; 4] = [
     Item { name: "Mutashabihat", arabic: "متشابهات", count: "5,278", scope: "phrase ↔ phrase", about: "Repeated phrases with small wording differences.", slug: "mutashabihat", ready: false },
     Item { name: "Similar ayah", arabic: "آيات متشابهة", count: "4,001", scope: "ayah ↔ ayah", about: "Ayat that match in meaning, context or wording, with a score.", slug: "similar-ayah", ready: true },
     Item { name: "Ayah themes", arabic: "مواضيع الآيات", count: "1,049", scope: "ayah range", about: "Core theme of each group of ayat.", slug: "ayah-theme", ready: true },
-    Item { name: "Topics and concepts", arabic: "المفاهيم", count: "3,158", scope: "concept ↔ concept", about: "Key concepts, the ayat they appear in, and how they relate.", slug: "ayah-topics", ready: false },
+    Item { name: "Concepts", arabic: "المفاهيم", count: "284", scope: "concept ↔ concept", about: "Quranic Arabic Corpus concepts, the ayat they appear in, and how they relate.", slug: "ayah-topics", ready: true },
 ];
 
 fn main() {
@@ -54,6 +59,8 @@ fn App() -> Element {
         rsx! { SimilarAyah {} }
     } else if path.ends_with("/ayah-theme") {
         rsx! { ThemesPage {} }
+    } else if path.ends_with("/ayah-topics") {
+        rsx! { TopicsPage {} }
     } else {
         rsx! { List {} }
     };
@@ -112,6 +119,10 @@ fn List() -> Element {
                 a { href: "https://quran.foundation", target: "_blank", rel: "noopener", "Quran Foundation / quran.com ↗" }
                 " (synced {quran_ui::data::DATA_FETCHED}; page layout: King Fahd Complex 1441 AH print) · ayah themes: Muhammad Farooq-i-Azam Malik's ruku' headings via "
                 a { href: "{QUL}/ayah-theme", target: "_blank", rel: "noopener", "QUL ↗" }
+                " · concepts: "
+                a { href: "https://corpus.quran.com/ontology.jsp", target: "_blank", rel: "noopener", "Quranic Arabic Corpus ontology ↗" }
+                " (GNU GPL) via "
+                a { href: "{QUL}/ayah-topics", target: "_blank", rel: "noopener", "QUL ↗" }
             }
         }
     }

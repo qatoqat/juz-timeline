@@ -29,6 +29,11 @@ def components():
         out[name] = {"hash": digest(similar[key]), "count": len(similar[key])}
     themes = json.loads((REPO / "explore" / "assets" / "themes.json").read_text(encoding="utf-8"))
     out["themes"] = {"hash": digest(themes), "count": len(themes)}
+    topics = json.loads((REPO / "explore" / "assets" / "topics.json").read_text(encoding="utf-8"))
+    for key, name in [("t", "concepts"), ("a", "concept ayat"), ("l", "concept links"), ("c", "concept co-occurrence")]:
+        out[name] = {"hash": digest(topics[key]), "count": len(topics[key])}
+    text = json.loads((REPO / "explore" / "assets" / "topic-ayat.json").read_text(encoding="utf-8"))
+    out["concept ayah text"] = {"hash": digest(text), "count": len(text["k"])}
     return out
 
 

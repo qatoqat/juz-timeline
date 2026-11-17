@@ -8,4 +8,5 @@ cd "$(dirname "$0")"
 python gen_data.py > ../core/src/data.rs.tmp && mv ../core/src/data.rs.tmp ../core/src/data.rs
 python similar.py
 python themes.py
+python topics.py
 python check_data.py
