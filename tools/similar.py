@@ -32,6 +32,14 @@ def load(kind):
     return [(int(s), int(a), t.split()) for s, a, t in rows]
 
 
+BASMALA_WORDS = 4
+
+
+def drop_basmala(rows):
+    """Tanzil prefixes ayah 1 of every surah but al-Fatiha (where it is ayah 1) and at-Tawbah with the basmala."""
+    return [(s, a, ws[BASMALA_WORDS:] if a == 1 and s not in (1, 9) else ws) for s, a, ws in rows]
+
+
 def norm(w):
     return re.sub("[أإآٱ]", "ا", w).replace("ى", "ي")
 
@@ -131,8 +139,8 @@ def variants(words, families):
 
 
 def main():
-    shown = load("simple")
-    clean = load("simple-clean")
+    shown = drop_basmala(load("simple"))
+    clean = drop_basmala(load("simple-clean"))
     words = [[norm(w) for w in ws] for _, _, ws in clean]
     keys = [[s, a] for s, a, _ in shown]
     text = [ws for _, _, ws in shown]

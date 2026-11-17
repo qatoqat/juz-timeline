@@ -82,7 +82,7 @@ fn Branch(node: Node, before: bool, picked: usize) -> Element {
     let height = node.leaves() as f32 * ROW;
     let hidden = drill() && !before && !revealed();
     let words = match (node.end, before) {
-        (true, true) => "ابتداء الآية".to_string(),
+        (true, true) => String::new(),
         (true, false) => "۝".to_string(),
         _ => node.words.join(" "),
     };
@@ -113,7 +113,9 @@ fn Branch(node: Node, before: bool, picked: usize) -> Element {
                     }
                     light(overlay, &click_data, &click_ayat);
                 },
-                span { class: "words", dir: "rtl", "data-tip": forms_tip, "{words}" if open() { " {rest}" } }
+                if !words.is_empty() {
+                    span { class: "words", dir: "rtl", "data-tip": forms_tip, "{words}" if open() { " {rest}" } }
+                }
                 if !node.rest.is_empty() && !hidden {
                     button {
                         class: "more",
