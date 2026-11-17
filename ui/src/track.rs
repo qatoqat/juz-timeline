@@ -332,6 +332,7 @@ pub fn Track(lo: f32, hi: f32, focus: Signal<Option<Focus>>, selected: Signal<Op
                         i { class: if dotted { "line rl dotted" } else { "line rl" }, style }
                     }
                 }
+                crate::band::BandLane { lo, hi, width: w }
                 OverlayLane { lo, hi, detail: true }
                 div { class: "lane pages",
                     span { class: "first", "{first_page}" }

@@ -132,3 +132,10 @@ h1 > a { direction: ltr; }
 .spot.sajdah.hot { color: var(--ink); background: transparent; }
 .spot.ruku, .spot.sajdah { z-index: 2; }
 .spot.picked { z-index: 4; }
+.bar.themes { height: 26px; margin-top: 3px; }
+.theme { top: 0; height: 100%; background-color: var(--juz-a); border-left: 1px solid var(--bg); display: flex; align-items: center; justify-content: flex-end; padding: 0 6px; overflow: hidden; white-space: nowrap; cursor: pointer; font-size: 11px; color: var(--soft); direction: ltr; }
+.theme.even { background-color: var(--juz-b); }
+.theme.heavy { box-shadow: inset -2px 0 0 var(--edge); }
+.theme.hot { background-color: color-mix(in srgb, var(--juz-on-a) 50%, var(--juz-a)); color: var(--ink); }
+.theme.on { background-color: var(--juz-on-a); color: var(--on-ink); }
+.theme .tl { overflow: hidden; text-overflow: ellipsis; }

@@ -1,4 +1,5 @@
 mod labels;
+pub mod band;
 pub mod menu;
 pub mod overlay;
 mod progress;

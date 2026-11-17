@@ -27,3 +27,5 @@ page quran-timeline dist "Juz timeline" ar
 page quran-explore dist/explore "Explore · Juz timeline" en
 html quran-explore dist/explore/similar-ayah "Similar ayah · Explore" ar ..
 cp explore/assets/similar.json dist/explore/similar-ayah/
+html quran-explore dist/explore/ayah-theme "Ayah themes · Explore" ar ..
+cp explore/assets/themes.json dist/explore/ayah-theme/

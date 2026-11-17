@@ -3,10 +3,12 @@ mod data;
 mod nav;
 mod similar;
 mod spine;
+mod themes;
 mod tree;
 
 use dioxus::prelude::*;
 use similar::SimilarAyah;
+use themes::ThemesPage;
 
 const QUL: &str = "https://qul.tarteel.ai/resources";
 const API: &str = "https://api-docs.quran.com";
@@ -25,7 +27,7 @@ struct Item {
 const RELATIONS: [Item; 4] = [
     Item { name: "Mutashabihat", arabic: "متشابهات", count: "5,278", scope: "phrase ↔ phrase", about: "Repeated phrases with small wording differences.", slug: "mutashabihat", ready: false },
     Item { name: "Similar ayah", arabic: "آيات متشابهة", count: "4,001", scope: "ayah ↔ ayah", about: "Ayat that match in meaning, context or wording, with a score.", slug: "similar-ayah", ready: true },
-    Item { name: "Ayah themes", arabic: "مواضيع الآيات", count: "1,049", scope: "ayah range", about: "Core theme of each group of ayat.", slug: "ayah-theme", ready: false },
+    Item { name: "Ayah themes", arabic: "مواضيع الآيات", count: "1,049", scope: "ayah range", about: "Core theme of each group of ayat.", slug: "ayah-theme", ready: true },
     Item { name: "Topics and concepts", arabic: "المفاهيم", count: "3,158", scope: "concept ↔ concept", about: "Key concepts, the ayat they appear in, and how they relate.", slug: "ayah-topics", ready: false },
 ];
 
@@ -45,8 +47,12 @@ fn go(href: &str) {
 
 #[component]
 fn App() -> Element {
-    if path().trim_end_matches('/').ends_with("/similar-ayah") {
+    let path = path();
+    let path = path.trim_end_matches('/');
+    if path.ends_with("/similar-ayah") {
         rsx! { SimilarAyah {} }
+    } else if path.ends_with("/ayah-theme") {
+        rsx! { ThemesPage {} }
     } else {
         rsx! { List {} }
     }
