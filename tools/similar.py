@@ -24,12 +24,23 @@ def is_mark(token):
     return all(0x064B <= ord(c) <= 0x065F or 0x06D6 <= ord(c) <= 0x06ED for c in token)
 
 
+def with_marks(text):
+    """Words of the text with each waqf sign kept, attached to the word before it by a no-break space."""
+    words = []
+    for token in text.split():
+        if is_mark(token) and words:
+            words[-1] += "\u00a0" + token
+        else:
+            words.append(token)
+    return words
+
+
 def load():
     """(surah, ayah, display words, plain words) from the quran.com cache (tools/fetch_quran_com.sh)."""
     rows = []
     for s in range(1, 115):
         for v in json.loads((CACHE / "quran-com" / f"{s}.json").read_text(encoding="utf-8"))["verses"]:
-            shown = [w for w in v["text_imlaei"].split() if not is_mark(w)]
+            shown = with_marks(v["text_imlaei"])
             plain = v["text_imlaei_simple"].split()
             assert len(shown) == len(plain), v["verse_key"]
             rows.append((s, v["verse_number"], shown, plain))

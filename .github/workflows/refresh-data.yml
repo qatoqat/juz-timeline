@@ -1,0 +1,36 @@
+name: Refresh Quran data
+
+# The Quran Foundation developer terms limit cached content to one week, so the data is
+# re-fetched, regenerated, checked and redeployed twice a week.
+on:
+  schedule:
+    - cron: "17 3 * * 1,4"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch, regenerate and check
+        run: tools/rebuild_data.sh
+      - name: Commit refreshed data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add core/src/data.rs explore/assets/similar.json explore/assets/themes.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Refresh Quran data from the quran.com API"
+          git push
+      - name: Redeploy the site
+        run: gh workflow run pages.yml --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}

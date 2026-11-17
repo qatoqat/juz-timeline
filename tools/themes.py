@@ -15,7 +15,7 @@ import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parent
 CACHE = ROOT / ".cache"
-ZIP = CACHE / "ayah-themes.db.zip"
+ZIP = ROOT / "data" / "ayah-themes.db.zip"
 DB = CACHE / "themes" / "ayah-themes.db"
 OUT = ROOT.parent / "explore" / "assets" / "themes.json"
 OPENING_WORDS = 6
@@ -37,7 +37,12 @@ def quran_com():
 
 
 def opening(text):
-    words = [w for w in text.split() if not all(0x064B <= ord(c) <= 0x065F or 0x06D6 <= ord(c) <= 0x06ED for c in w)]
+    words = []
+    for token in text.split():
+        if all(0x064B <= ord(c) <= 0x065F or 0x06D6 <= ord(c) <= 0x06ED for c in token) and words:
+            words[-1] += "\u00a0" + token
+        else:
+            words.append(token)
     return " ".join(words[:OPENING_WORDS]) + (" …" if len(words) > OPENING_WORDS else "")
 
 
