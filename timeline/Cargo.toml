@@ -1,0 +1,10 @@
+[package]
+name = "quran-timeline"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+quran-core = { path = "../core" }
+dioxus = { workspace = true }
+wasm-bindgen = { workspace = true }
+web-sys = { workspace = true }

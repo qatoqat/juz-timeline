@@ -1,17 +1,13 @@
-mod data;
 mod labels;
 mod menu;
-mod model;
 mod progress;
 mod search;
 mod track;
 
 use dioxus::prelude::*;
-use model::Mushaf;
-use std::sync::LazyLock;
+pub use quran_core::{data, model, MUSHAF};
 use track::{span_of, Track};
 
-pub static MUSHAF: LazyLock<Mushaf> = LazyLock::new(Mushaf::build);
 
 #[derive(Clone, Copy, PartialEq)]
 enum Layout {
@@ -51,7 +47,7 @@ fn App() -> Element {
         style { {include_str!("../assets/main.css")} }
         main { dir: "rtl",
             header {
-                h1 { "خط الأجزاء" span { class: "sub", "Juz timeline" } }
+                h1 { "خط الأجزاء" span { class: "sub", "Juz timeline" } a { class: "explore", href: "explore/", "Explore" } }
                 search::Search { selected }
                 div { class: "toggle", dir: "ltr",
                     button { class: if layout() == Layout::Full { "on" }, onclick: move |_| layout.set(Layout::Full), "Full 1–30" }

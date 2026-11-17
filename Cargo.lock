@@ -2122,10 +2122,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "quran-core"
+version = "0.1.0"
+
+[[package]]
+name = "quran-explore"
+version = "0.1.0"
+dependencies = [
+ "dioxus",
+ "quran-core",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "quran-timeline"
 version = "0.1.0"
 dependencies = [
  "dioxus",
+ "quran-core",
  "wasm-bindgen",
  "web-sys",
 ]
