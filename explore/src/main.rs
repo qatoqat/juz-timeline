@@ -1,4 +1,6 @@
+mod data;
 mod similar;
+mod tree;
 
 use dioxus::prelude::*;
 use similar::SimilarAyah;

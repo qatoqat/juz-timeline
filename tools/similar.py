@@ -16,7 +16,6 @@ TANZIL = "https://tanzil.net/pub/download/index.php?quranType={}&outType=txt-2&a
 
 MIN_WORDS, MAX_WORDS = 3, 30
 MAX_MEMBERS = 12
-CUE_WORDS = 2
 COMMON_DF = 150
 RARE_DF = 40
 VARIANT_RATIO = 0.7
@@ -140,36 +139,24 @@ def main():
 
     families = phrase_families(words)
     ordered = sorted(families.items(), key=lambda kv: (-len(kv[1]), -len(kv[0])))
-    out = []
-    for g, members in ordered:
-        rows = []
-        for i in sorted(members):
-            k = find(words[i], g)
-            end = k + len(g)
-            rows.append(keys[i] + [" ".join(text[i][max(0, k - CUE_WORDS):k]), " ".join(text[i][end:end + CUE_WORDS])])
-        first = min(members)
-        k = find(words[first], g)
-        out.append({"p": " ".join(text[first][k:k + len(g)]), "m": rows})
+    pairs = sorted(variants(words, families), key=lambda p: -p[2])
 
-    pairs = variants(words, families)
-    for a, b, ratio in sorted(pairs, key=lambda p: -p[2]):
+    used = sorted({i for _, m in ordered for i in m} | {i for a, b, _ in pairs for i in (a, b)})
+    slot = {i: n for n, i in enumerate(used)}
+    out = {"a": [keys[i] + [" ".join(text[i])] for i in used], "f": [], "v": []}
+    for g, members in ordered:
+        out["f"].append([len(g), [[slot[i], find(words[i], g)] for i in sorted(members)]])
+
+    for a, b, ratio in pairs:
         same_a, same_b = aligned([stem(w) for w in words[a]], [stem(w) for w in words[b]])
 
-        def diff(i, other, same):
-            marks = []
-            for j, w in enumerate(text[i]):
-                if j not in same:
-                    marks.append("*" + w)
-                elif words[i][j] != words[other][same[j]]:
-                    marks.append("~" + w)
-                else:
-                    marks.append(w)
-            return marks
+        def flags(i, other, same):
+            return "".join("*" if j not in same else "~" if words[i][j] != words[other][same[j]] else "." for j in range(len(text[i])))
 
-        out.append({"v": round(ratio, 2), "m": [keys[a] + [diff(a, b, same_a)], keys[b] + [diff(b, a, same_b)]]})
+        out["v"].append([round(ratio, 2), [[slot[a], flags(a, b, same_a)], [slot[b], flags(b, a, same_b)]]])
 
     OUT.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    print(f"{len(families)} phrase families, {len(pairs)} variants, {OUT.stat().st_size // 1024} KB")
+    print(f"{len(used)} ayat, {len(families)} phrase families, {len(pairs)} variants, {OUT.stat().st_size // 1024} KB")
 
 
 if __name__ == "__main__":

@@ -1,108 +1,69 @@
+use crate::data::Data;
+use crate::tree::{ayah_label, surah_name, Shared, Tree};
 use dioxus::prelude::*;
 use quran_ui::overlay::{ayah_pos, AyahKey, Overlay, Selection, Spot};
-use quran_ui::MUSHAF;
-use serde::Deserialize;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 const QUL: &str = "https://qul.tarteel.ai/resources/similar-ayah";
 const FETCH: &str = r#"fetch("similar.json").then(r => r.text()).then(t => dioxus.send(t))"#;
-
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum Entry {
-    Family { p: String, m: Vec<(u8, u16, String, String)> },
-    Variant { v: f32, m: Vec<(u8, u16, Vec<String>)> },
-}
-
-impl Entry {
-    fn keys(&self) -> Vec<AyahKey> {
-        match self {
-            Entry::Family { m, .. } => m.iter().map(|r| (r.0, r.1)).collect(),
-            Entry::Variant { m, .. } => m.iter().map(|r| (r.0, r.1)).collect(),
-        }
-    }
-}
-
-struct Data {
-    entries: Vec<Entry>,
-    by_ayah: HashMap<AyahKey, Vec<usize>>,
-}
-
-impl Data {
-    fn parse(text: &str) -> Option<Data> {
-        let entries: Vec<Entry> = serde_json::from_str(text).ok()?;
-        let mut by_ayah: HashMap<AyahKey, Vec<usize>> = HashMap::new();
-        for (i, e) in entries.iter().enumerate() {
-            for k in e.keys() {
-                by_ayah.entry(k).or_default().push(i);
-            }
-        }
-        Some(Data { entries, by_ayah })
-    }
-
-    fn dots(&self) -> Vec<Spot> {
-        self.by_ayah
-            .iter()
-            .map(|(&key, ids)| Spot {
-                key,
-                pos: ayah_pos(key),
-                tip: format!("{}:{} · {}", key.0, key.1, plural(ids.len(), "similar group")),
-                weight: ids.len().min(3) as u8,
-            })
-            .collect()
-    }
-}
+const SPINE_PAD: usize = 2;
 
 fn plural(n: usize, word: &str) -> String {
     if n == 1 { format!("1 {word}") } else { format!("{n} {word}s") }
 }
 
-fn label(key: AyahKey) -> String {
-    format!("{}:{} · \u{2068}{}\u{2069}", key.0, key.1, MUSHAF.surahs[key.0 as usize - 1].name)
+fn dots(data: &Data) -> Vec<Spot> {
+    (0..data.keys.len())
+        .map(|a| {
+            let n = data.family_of[a].len() + data.variant_of[a].len();
+            let key = data.keys[a];
+            Spot { key, pos: ayah_pos(key), tip: format!("{}:{} · {}", key.0, key.1, plural(n, "similar group")), weight: n.min(3) as u8 }
+        })
+        .collect()
 }
 
-fn spots(keys: impl Iterator<Item = AyahKey>) -> Vec<Spot> {
-    keys.map(|key| Spot { key, pos: ayah_pos(key), tip: label(key), weight: 3 }).collect()
+fn related(data: &Data, a: usize, root: Option<usize>) -> Vec<AyahKey> {
+    let mut keys: Vec<AyahKey> = root.map(|f| data.families[f].members.iter().map(|m| data.keys[m.0]).collect()).unwrap_or_default();
+    for &v in &data.variant_of[a] {
+        keys.extend(data.variants[v].members.iter().map(|m| data.keys[m.0]));
+    }
+    keys.push(data.keys[a]);
+    keys.sort();
+    keys.dedup();
+    keys
 }
 
 #[component]
 pub fn SimilarAyah() -> Element {
-    let data = use_signal(|| None::<Rc<Data>>);
-    let overlay = use_context_provider(|| Overlay { dots: Signal::new(vec![]), marks: Signal::new(vec![]), picked: Signal::new(None) });
+    let mut data = use_signal(|| None::<Rc<Data>>);
+    let overlay = use_context_provider(|| Overlay {
+        dots: Signal::new(vec![]),
+        marks: Signal::new(vec![]),
+        picked: Signal::new(None),
+        hot: Signal::new(vec![]),
+    });
+    let mut root = use_signal(|| None::<usize>);
     use_future(move || async move {
         let mut fetch = document::eval(FETCH);
         if let Ok(text) = fetch.recv::<String>().await {
             if let Some(d) = Data::parse(&text) {
-                let mut dots = overlay.dots;
-                dots.set(d.dots());
-                let mut data = data;
+                let mut dots_signal = overlay.dots;
+                dots_signal.set(dots(&d));
                 data.set(Some(Rc::new(d)));
             }
         }
     });
-
-    let mut chosen = use_signal(|| None::<usize>);
     use_effect(move || {
-        let _ = (overlay.picked)();
-        chosen.set(None);
+        let ayah = data().zip((overlay.picked)()).and_then(|(d, key)| d.slot.get(&key).and_then(|&a| d.default_root(a)));
+        root.set(ayah);
     });
     use_effect(move || {
         let keys = match (data(), (overlay.picked)()) {
-            (Some(d), Some(key)) => {
-                let ids = d.by_ayah.get(&key).cloned().unwrap_or_default();
-                let mut keys: Vec<AyahKey> = match chosen() {
-                    Some(i) if i < d.entries.len() => d.entries[i].keys(),
-                    _ => ids.iter().flat_map(|&i| d.entries[i].keys()).collect(),
-                };
-                keys.sort();
-                keys.dedup();
-                keys
-            }
+            (Some(d), Some(key)) => d.slot.get(&key).map(|&a| related(&d, a, root())).unwrap_or_default(),
             _ => vec![],
         };
         let mut marks = overlay.marks;
-        marks.set(spots(keys.into_iter()));
+        marks.set(keys.into_iter().map(|key| Spot { key, pos: ayah_pos(key), tip: format!("{}:{}", key.0, key.1), weight: 3 }).collect());
     });
 
     rsx! {
@@ -117,105 +78,135 @@ pub fn SimilarAyah() -> Element {
                     a { class: "explore", href: "{QUL}", target: "_blank", rel: "noopener", "Source ↗" }
                 }
             },
-            extra: rsx! { Groups { data: data().map(Shared), chosen } },
+            extra: rsx! { Panel { data: data().map(Shared), root } },
         }
     }
 }
 
-#[derive(Clone)]
-struct Shared(Rc<Data>);
+#[component]
+fn Panel(data: Option<Shared>, root: Signal<Option<usize>>) -> Element {
+    let overlay = use_context::<Overlay>();
+    let Some(shared) = data else { return rsx! { p { class: "groups-note", "Loading similar ayat…" } } };
+    let Some(key) = (overlay.picked)() else {
+        return rsx! { p { class: "groups-note", "Select a surah or juz, then click a dot under the rub' row to see that ayah's similar ayat." } };
+    };
+    let d = shared.0.clone();
+    let Some(&a) = d.slot.get(&key) else {
+        return rsx! { p { class: "groups-note", "{key.0}:{key.1} has no similar ayat in this data." } };
+    };
 
-impl PartialEq for Shared {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.0, &other.0)
+    rsx! {
+        div { class: "similar",
+            Spine { data: shared.clone(), ayah: a, root }
+            if let Some(f) = root() {
+                Tree { key: "{f}-{a}", data: shared.clone(), family: f, picked: a }
+            }
+            Variants { data: shared, ayah: a }
+        }
     }
 }
 
 #[component]
-fn Groups(data: Option<Shared>, mut chosen: Signal<Option<usize>>) -> Element {
+fn Spine(data: Shared, ayah: usize, root: Signal<Option<usize>>) -> Element {
     let overlay = use_context::<Overlay>();
-    let selection = use_context::<Selection>();
-    let picked = (overlay.picked)();
-
-    let Some(Shared(data)) = data else { return rsx! { p { class: "groups-note", "Loading similar ayat…" } } };
-    let Some(key) = picked else {
-        return rsx! { p { class: "groups-note", "Select a surah or juz, then click a dot under the rub' row to see that ayah's similar ayat." } };
-    };
-    let mut ids = data.by_ayah.get(&key).cloned().unwrap_or_default();
-    ids.sort_by_key(|&i| match &data.entries[i] {
-        Entry::Family { p, m } => (0, usize::MAX - m.len(), usize::MAX - p.len()),
-        Entry::Variant { .. } => (1, 0, 0),
-    });
-
-    let mut previous: Vec<AyahKey> = vec![];
-    let rows: Vec<(usize, bool)> = ids
+    let d = data.0.clone();
+    let words = &d.text[ayah];
+    let mut spans: Vec<(usize, usize, usize)> = d.family_of[ayah]
         .iter()
-        .map(|&i| {
-            let keys = data.entries[i].keys();
-            let nested = !previous.is_empty() && keys.iter().all(|k| previous.contains(k));
-            if !nested {
-                previous = keys;
-            }
-            (i, nested)
+        .map(|&f| {
+            let s = d.start_in(f, ayah);
+            (f, s, s + d.families[f].len)
         })
         .collect();
+    spans.sort_by_key(|&(_, s, e)| (s, usize::MAX - e));
+    let mut ends: Vec<usize> = vec![];
+    let bars: Vec<(usize, usize, usize, usize)> = spans
+        .into_iter()
+        .map(|(f, s, e)| {
+            let layer = ends.iter().position(|&end| end <= s).unwrap_or_else(|| {
+                ends.push(0);
+                ends.len() - 1
+            });
+            ends[layer] = e;
+            (f, s, e, layer)
+        })
+        .collect();
+    let lo = bars.iter().map(|b| b.1).min().unwrap_or(0).saturating_sub(SPINE_PAD);
+    let hi = (bars.iter().map(|b| b.2).max().unwrap_or(words.len()) + SPINE_PAD).min(words.len());
+    let shown: Vec<(usize, String)> = (lo..hi).map(|i| (i, words[i].clone())).collect();
 
     rsx! {
-        div { class: "groups",
-            p { class: "groups-head", "{label(key)} · {plural(ids.len(), \"group\")}" }
-            if ids.is_empty() { p { class: "groups-note", "No similar ayat found for this ayah." } }
-            for (i, nested) in rows {
-                div {
-                    key: "{i}",
-                    class: format!("group{}{}", if nested { " nested" } else { "" }, if chosen() == Some(i) { " on" } else { "" }),
-                    onclick: move |_| chosen.set(if chosen() == Some(i) { None } else { Some(i) }),
-                    match &data.entries[i] {
-                        Entry::Family { p, m } => rsx! {
-                            div { class: "group-head",
-                                span { class: "phrase", dir: "rtl", "{p}" }
-                                span { class: "count", "{m.len()} ayat" }
-                            }
-                            for (s, a, before, after) in m.iter().cloned() {
-                                div {
-                                    class: if (s, a) == key { "member self" } else { "member" },
-                                    onclick: move |e| {
-                                        e.stop_propagation();
-                                        selection.show((s, a), overlay);
-                                    },
-                                    span { class: "ref", "{label((s, a))}" }
-                                    span { class: "cue", dir: "rtl",
-                                        span { class: "before", "{before}" }
-                                        span { class: "gap", " … " }
-                                        span { class: "after", "{after}" }
-                                    }
+        div { class: "spine-wrap",
+            div { class: "spine-head",
+                "{ayah_label(&d, ayah)} · {surah_name(&d, ayah)} · "
+                {plural(d.family_of[ayah].len(), "shared phrase")}
+                if !bars.is_empty() { span { class: "hint", " · tap a bar to branch from that phrase" } }
+            }
+            div { class: "spine", dir: "rtl",
+                if lo > 0 { span { class: "ellipsis", "…" } }
+                div { class: "spine-grid", style: "grid-template-columns: repeat({hi - lo}, auto)",
+                    for (i, w) in shown {
+                        span { key: "w{i}", class: "sw", style: "grid-row:1;grid-column:{i - lo + 1}", "{w}" }
+                    }
+                    for (f, s, e, layer) in bars {
+                        div {
+                            key: "f{f}",
+                            class: if root() == Some(f) { "sbar on" } else { "sbar" },
+                            style: "grid-row:{layer + 2};grid-column:{s - lo + 1} / {e - lo + 1}",
+                            "data-tip": "{d.phrase(f)} · {plural(d.families[f].members.len(), \"ayah\")}",
+                            onclick: move |_| root.set(Some(f)),
+                            onmouseenter: {
+                                let d = d.clone();
+                                move |_| {
+                                    let mut hot = overlay.hot;
+                                    hot.set(d.families[f].members.iter().map(|m| d.keys[m.0]).collect());
+                                }
+                            },
+                            onmouseleave: move |_| {
+                                let mut hot = overlay.hot;
+                                hot.set(vec![]);
+                            },
+                        }
+                    }
+                }
+                if hi < words.len() { span { class: "ellipsis", "…" } }
+            }
+        }
+    }
+}
+
+#[component]
+fn Variants(data: Shared, ayah: usize) -> Element {
+    let selection = use_context::<Selection>();
+    let overlay = use_context::<Overlay>();
+    let d = data.0.clone();
+    let list = d.variant_of[ayah].clone();
+    if list.is_empty() {
+        return rsx! {};
+    }
+    rsx! {
+        div { class: "variants",
+            p { class: "variants-head", "Close variants" }
+            for v in list {
+                div { key: "{v}", class: "variant",
+                    span { class: "count",
+                        if d.variants[v].ratio >= 1.0 { "differs only by و / ف" } else { "{(d.variants[v].ratio * 100.0).round()}% alike" }
+                    }
+                    for (a, flags) in d.variants[v].members.clone() {
+                        div {
+                            key: "{a}",
+                            class: if a == ayah { "member self" } else { "member" },
+                            onclick: {
+                                let key = d.keys[a];
+                                move |_| selection.show(key, overlay)
+                            },
+                            span { class: "ref", "{ayah_label(&d, a)} · {surah_name(&d, a)}" }
+                            span { class: "cue", dir: "rtl",
+                                for (n, (w, f)) in d.text[a].iter().zip(flags.chars()).enumerate() {
+                                    span { key: "{n}", class: match f { '*' => "w diff", '~' => "w pre", _ => "w" }, "{w} " }
                                 }
                             }
-                        },
-                        Entry::Variant { v, m } => rsx! {
-                            div { class: "group-head",
-                                span { class: "phrase", "Close variant" }
-                                span { class: "count", if *v >= 1.0 { "differs only by و / ف" } else { "{(v * 100.0).round()}% alike" } }
-                            }
-                            for (s, a, words) in m.iter().cloned() {
-                                div {
-                                    class: if (s, a) == key { "member self" } else { "member" },
-                                    onclick: move |e| {
-                                        e.stop_propagation();
-                                        selection.show((s, a), overlay);
-                                    },
-                                    span { class: "ref", "{label((s, a))}" }
-                                    span { class: "cue", dir: "rtl",
-                                        for (n, w) in words.iter().enumerate() {
-                                            span {
-                                                key: "{n}",
-                                                class: if w.starts_with('*') { "w diff" } else if w.starts_with('~') { "w pre" } else { "w" },
-                                                "{w.trim_start_matches(['*', '~'])} "
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
+                        }
                     }
                 }
             }

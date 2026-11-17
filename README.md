@@ -28,4 +28,4 @@ python -m http.server -d dist
 
 - Surah, juz, page, rub', ruku' and sajdah positions: [Tanzil Quran metadata](https://tanzil.net/docs/quran_metadata) (CC BY 3.0).
 - Line positions for rub' lengths (Madani 15-line layout): [quran.com API](https://api-docs.quran.com).
-- Quran text for similar ayah matching: [Tanzil](https://tanzil.net) (simple and simple-clean). Families are built by `tools/similar.py` into `explore/assets/similar.json`: shared phrases of 3+ words found in 2–12 ayat, plus close variants aligned word by word.
+- Quran text for similar ayah matching: [Tanzil](https://tanzil.net) (simple and simple-clean). Families are built by `tools/similar.py` into `explore/assets/similar.json` (ayah text table plus word offsets): shared phrases of 3+ words found in 2–12 ayat, plus close variants aligned word by word. The page draws each family as a two-sided right-to-left word tree (after the DoubleTree design by Culy & Lyding).

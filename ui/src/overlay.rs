@@ -17,6 +17,7 @@ pub struct Overlay {
     pub dots: Signal<Vec<Spot>>,
     pub marks: Signal<Vec<Spot>>,
     pub picked: Signal<Option<AyahKey>>,
+    pub hot: Signal<Vec<AyahKey>>,
 }
 
 #[derive(Clone, Copy)]
@@ -45,6 +46,7 @@ pub fn OverlayLane(lo: f32, hi: f32, detail: bool) -> Element {
     let inside = move |p: f32| p >= lo - EPS && p < hi - EPS;
     let picked = (overlay.picked)();
     let marked: Vec<AyahKey> = overlay.marks.read().iter().map(|s| s.key).collect();
+    let hot = overlay.hot.read().clone();
     let spots: Vec<Spot> = if detail { overlay.dots.read().clone() } else { overlay.marks.read().clone() };
     let spots: Vec<(Spot, f32)> = spots.into_iter().filter(|s| inside(s.pos)).map(|s| { let px = x(s.pos); (s, px) }).collect();
 
@@ -54,10 +56,11 @@ pub fn OverlayLane(lo: f32, hi: f32, detail: bool) -> Element {
                 b {
                     key: "{spot.key.0}:{spot.key.1}",
                     class: format!(
-                        "spot w{}{}{}",
+                        "spot w{}{}{}{}",
                         spot.weight.min(3),
                         if picked == Some(spot.key) { " picked" } else { "" },
                         if detail && marked.contains(&spot.key) { " marked" } else { "" },
+                        if hot.contains(&spot.key) { " hot" } else { "" },
                     ),
                     style: "right:{px}%",
                     "data-tip": "{spot.tip}",
