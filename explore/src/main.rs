@@ -50,13 +50,14 @@ fn go(href: &str) {
 fn App() -> Element {
     let path = path();
     let path = path.trim_end_matches('/');
-    if path.ends_with("/similar-ayah") {
+    let page = if path.ends_with("/similar-ayah") {
         rsx! { SimilarAyah {} }
     } else if path.ends_with("/ayah-theme") {
         rsx! { ThemesPage {} }
     } else {
         rsx! { List {} }
-    }
+    };
+    rsx! { quran_ui::Fresh { {page} } }
 }
 
 #[component]

@@ -1,3 +1,4 @@
+mod fresh;
 mod labels;
 pub mod band;
 pub mod hash;
@@ -9,6 +10,7 @@ mod track;
 
 use dioxus::prelude::*;
 pub use quran_core::{data, model, MUSHAF};
+pub use fresh::Fresh;
 use track::{span_of, Track};
 
 

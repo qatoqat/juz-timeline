@@ -8,3 +8,4 @@ quran-core = { path = "../core" }
 dioxus = { workspace = true }
 web-sys = { workspace = true }
 wasm-bindgen = { workspace = true }
+js-sys = "0.3"
