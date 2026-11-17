@@ -10,6 +10,7 @@ const SEARCH_LIMIT: usize = 30;
 
 #[derive(Clone, PartialEq)]
 struct Theme {
+    kind: u8,
     surah: u8,
     from: u16,
     to: u16,
@@ -29,20 +30,31 @@ fn ruku_of(surah: u8, ayah: u16) -> usize {
 }
 
 fn parse(json: &str) -> Option<Vec<Theme>> {
-    let raw: Vec<(u8, u16, u16, String)> = serde_json::from_str(json).ok()?;
+    let raw: Vec<(u8, u16, u16, u8, String)> = serde_json::from_str(json).ok()?;
     let mut number = 0;
     let mut last = 0;
     Some(
         raw.into_iter()
-            .map(|(surah, from, to, text)| {
+            .map(|(surah, from, to, kind, text)| {
                 number = if surah == last { number + 1 } else { 1 };
                 last = surah;
                 let ayat = MUSHAF.surahs[surah as usize - 1].ayat;
                 let end = if to >= ayat { surah_end(surah) } else { ayah_pos((surah, to + 1)) };
-                Theme { surah, from, to, text, number, ruku: ruku_of(surah, from), start: ayah_pos((surah, from)), end }
+                Theme { kind, surah, from, to, text, number, ruku: ruku_of(surah, from), start: ayah_pos((surah, from)), end }
             })
             .collect(),
     )
+}
+
+const NO_THEME: u8 = 2;
+const CONTINUED: u8 = 1;
+
+fn describe(t: &Theme) -> String {
+    match t.kind {
+        NO_THEME => format!("No theme · opens with {}", t.text),
+        CONTINUED => format!("{} (continued)", t.text),
+        _ => t.text.clone(),
+    }
 }
 
 fn cells(themes: &[Theme]) -> Vec<Cell> {
@@ -56,8 +68,8 @@ fn cells(themes: &[Theme]) -> Vec<Cell> {
                 start: t.start,
                 end: t.end,
                 number: t.number,
-                label: t.text.clone(),
-                tip: format!("{}:{}–{} · {}", t.surah, t.from, t.to, t.text),
+                label: describe(t),
+                tip: format!("{}:{}–{} · {}", t.surah, t.from, t.to, describe(t)),
                 heavy: (r.surah, r.ayah) == (t.surah, t.from),
                 level: 0,
             }
@@ -204,7 +216,7 @@ fn Outline(themes: Option<Shared>) -> Element {
                                             },
                                             span { class: "num", "{t.number}" }
                                             span { class: "span", "{t.surah}:{t.from}–{t.to}" }
-                                            div { class: if revealed { "text" } else { "text hidden" }, "{t.text}" }
+                                            div { class: format!("text{}{}", if revealed { "" } else { " hidden" }, if t.kind == NO_THEME { " none" } else { "" }), "{describe(&t)}" }
                                             span { class: "len", "{pages} p" }
                                         }
                                     }
