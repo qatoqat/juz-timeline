@@ -1,16 +1,24 @@
+use crate::labels::Dome;
+use crate::menu::{open_menu, Menu, Target};
 use crate::track::EPS;
 use crate::Focus;
 use dioxus::prelude::*;
 
 pub type AyahKey = (u8, u16);
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Default)]
 pub struct Spot {
     pub key: AyahKey,
     pub pos: f32,
     pub tip: String,
     pub weight: u8,
+    pub ruku: bool,
+    pub sajdah: bool,
 }
+
+const SPOT_MAX: f32 = 15.0;
+const SPOT_MIN: f32 = 4.0;
+const RUKU_MIN: f32 = 11.0;
 
 #[derive(Clone, Copy)]
 pub struct Overlay {
@@ -51,39 +59,58 @@ pub fn ayah_pos(key: AyahKey) -> f32 {
 }
 
 #[component]
-pub fn OverlayLane(lo: f32, hi: f32, detail: bool) -> Element {
+pub fn OverlayLane(lo: f32, hi: f32, detail: bool, width: f32) -> Element {
     let Some(overlay) = try_use_context::<Overlay>() else { return rsx! {} };
     let selection = use_context::<Selection>();
+    let menu = use_context::<Signal<Option<Menu>>>();
     let x = move |p: f32| (p - lo) / (hi - lo) * 100.0;
     let inside = move |p: f32| p >= lo - EPS && p < hi - EPS;
     let picked = (overlay.picked)();
     let marked: Vec<AyahKey> = overlay.marks.read().iter().map(|s| s.key).collect();
     let hot = overlay.hot.read().clone();
-    let spots: Vec<Spot> = if detail { overlay.dots.read().clone() } else { overlay.marks.read().clone() };
-    let spots: Vec<(Spot, f32)> = spots.into_iter().filter(|s| inside(s.pos)).map(|s| { let px = x(s.pos); (s, px) }).collect();
+    let source: Vec<Spot> = if detail { overlay.dots.read().clone() } else { overlay.marks.read().clone() };
+    let mut spots: Vec<(Spot, f32)> = source.into_iter().filter(|s| inside(s.pos)).map(|s| { let px = x(s.pos); (s, px) }).collect();
+    spots.sort_by(|a, b| a.1.total_cmp(&b.1));
+    let gaps: Vec<f32> = (0..spots.len())
+        .map(|i| {
+            let prev = if i > 0 { spots[i].1 - spots[i - 1].1 } else { f32::MAX };
+            let next = if i + 1 < spots.len() { spots[i + 1].1 - spots[i].1 } else { f32::MAX };
+            prev.min(next) * width / 100.0
+        })
+        .collect();
 
     rsx! {
         div { class: if detail { "lane dots" } else { "lane marks" },
-            for (spot, px) in spots {
-                b {
-                    key: "{spot.key.0}:{spot.key.1}",
-                    class: format!(
-                        "spot w{}{}{}{}",
-                        spot.weight.min(3),
-                        if picked == Some(spot.key) { " picked" } else { "" },
-                        if detail && marked.contains(&spot.key) { " marked" } else { "" },
-                        if hot.contains(&spot.key) { " hot" } else { "" },
-                    ),
-                    style: "right:{px}%",
-                    "data-tip": "{spot.tip}",
-                    onclick: move |_| {
-                        if detail {
-                            let mut picked = overlay.picked;
-                            picked.set(Some(spot.key));
-                        } else {
-                            selection.show(spot.key, overlay);
+            for ((spot, px), gap) in spots.into_iter().zip(gaps) {
+                {
+                    let size = if detail { (gap * 0.9).clamp(SPOT_MIN, SPOT_MAX) } else { 8.0 };
+                    let (s, a) = spot.key;
+                    rsx! {
+                        b {
+                            key: "{s}:{a}",
+                            class: format!(
+                                "spot w{}{}{}{}{}",
+                                spot.weight.min(3),
+                                if spot.sajdah { " sajdah" } else { "" },
+                                if picked == Some(spot.key) { " picked" } else { "" },
+                                if detail && marked.contains(&spot.key) { " marked" } else { "" },
+                                if hot.contains(&spot.key) { " hot" } else { "" },
+                            ),
+                            style: "right:{px}%;width:{size}px;height:{size}px;font-size:{size * 0.62}px",
+                            "data-tip": "{spot.tip}",
+                            onclick: move |_| {
+                                if detail {
+                                    let mut picked = overlay.picked;
+                                    picked.set(Some(spot.key));
+                                } else {
+                                    selection.show(spot.key, overlay);
+                                }
+                            },
+                            oncontextmenu: move |e| open_menu(menu, &e, Target::Ayah(s, a)),
+                            if spot.sajdah { Dome {} }
+                            if spot.ruku && size >= RUKU_MIN { i { class: "rk-in", "ع" } }
                         }
-                    },
+                    }
                 }
             }
         }

@@ -1,19 +1,28 @@
 use crate::data::{FIRST_PAGE_LINES, JUZ, PAGES, RUB, RUB_LINES, RUKU, SAJDAH, SURAHS};
+use std::sync::LazyLock;
 
 pub const TOTAL_PAGES: f32 = 604.0;
 
+static SURAH_OFFSETS: LazyLock<Vec<u32>> = LazyLock::new(|| {
+    let mut acc = 0;
+    let mut out = vec![0];
+    for s in SURAHS.iter() {
+        acc += s.2 as u32;
+        out.push(acc);
+    }
+    out
+});
+
+static PAGE_STARTS: LazyLock<Vec<u32>> = LazyLock::new(|| PAGES.iter().map(|&(s, a)| ayah_index(s, a)).collect());
+
 fn ayah_index(surah: u8, ayah: u16) -> u32 {
-    let before: u32 = SURAHS[..(surah as usize - 1).min(SURAHS.len())]
-        .iter()
-        .map(|s| s.2 as u32)
-        .sum();
-    before + ayah as u32 - 1
+    SURAH_OFFSETS[(surah as usize - 1).min(SURAHS.len())] + ayah as u32 - 1
 }
 
 /// Position measured in Madani-mushaf pages (0.0 = start of page 1, 604.0 = end).
 pub fn page_pos(surah: u8, ayah: u16) -> f32 {
     let idx = ayah_index(surah, ayah);
-    let starts: Vec<u32> = PAGES.iter().map(|&(s, a)| ayah_index(s, a)).collect();
+    let starts = &*PAGE_STARTS;
     let p = starts.partition_point(|&s| s <= idx).saturating_sub(1);
     let (lo, hi) = (starts[p], starts[p + 1]);
     p as f32 + (idx - lo) as f32 / (hi - lo).max(1) as f32

@@ -230,7 +230,7 @@ pub fn Track(lo: f32, hi: f32, focus: Signal<Option<Focus>>, selected: Signal<Op
                 }
             }
             if !detail {
-                OverlayLane { lo, hi, detail: false }
+                OverlayLane { lo, hi, detail: false, width: w }
             }
             div { class: "lane sajdah",
                 for (style, thick) in ticks {
@@ -330,7 +330,7 @@ pub fn Track(lo: f32, hi: f32, focus: Signal<Option<Focus>>, selected: Signal<Op
                         i { class: if dotted { "line rl dotted" } else { "line rl" }, style }
                     }
                 }
-                OverlayLane { lo, hi, detail: true }
+                OverlayLane { lo, hi, detail: true, width: w }
                 div { class: "lane pages",
                     span { class: "first", "{first_page}" }
                     for (p, px, show) in page_marks {

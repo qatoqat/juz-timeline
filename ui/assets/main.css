@@ -113,11 +113,20 @@ h1 .explore:hover { text-decoration: underline; }
 h1 > * { unicode-bidi: isolate; }
 h1 > a { direction: ltr; }
 .rk { color: var(--soft); font-size: 12px; line-height: 20px; transform: translateX(50%); cursor: default; }
-.dots, .marks { height: 14px; }
-.spot { top: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--sj); transform: translateX(50%); cursor: pointer; opacity: 0.45; }
-.spot.w2 { opacity: 0.7; }
-.spot.w3 { opacity: 1; }
-.spot.marked { background: var(--bm); opacity: 1; }
+.dots { height: 20px; }
+.marks { height: 14px; }
+.spot { top: 50%; border-radius: 50%; border: 1.5px solid var(--sj); background: transparent; transform: translate(50%, -50%); cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; color: var(--bg); box-sizing: border-box; }
+.spot.w1 { background: color-mix(in srgb, var(--sj) 55%, transparent); }
+.spot.w2 { background: color-mix(in srgb, var(--sj) 78%, transparent); }
+.spot.w3 { background: var(--sj); }
+.spot.w0 .rk-in { color: var(--sj); }
+.spot .rk-in { font-style: normal; font-weight: 500; pointer-events: none; }
+.spot.sajdah { border: 0; background: transparent; border-radius: 0; color: var(--sj); }
+.spot.sajdah svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.spot.sajdah .rk-in { position: relative; top: 15%; color: var(--sj); font-size: 0.8em; }
+.spot.marked { border-color: var(--bm); background: var(--bm); }
+.spot.sajdah.marked { color: var(--bm); background: transparent; }
 .spot.picked { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--ink); opacity: 1; }
-.marks .spot { background: var(--bm); opacity: 1; }
-.spot.hot { background: var(--ink); opacity: 1; transform: translateX(50%) scale(1.35); z-index: 3; }
+.marks .spot { border-color: var(--bm); background: var(--bm); }
+.spot.hot { border-color: var(--ink); background: var(--ink); z-index: 3; }
+.spot.sajdah.hot { color: var(--ink); background: transparent; }

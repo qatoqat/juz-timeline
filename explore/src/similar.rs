@@ -4,6 +4,8 @@ use crate::spine::{load_drill, plural, Spine, Variants};
 use crate::tree::{Drill, Shared, Tree};
 use dioxus::prelude::*;
 use quran_ui::overlay::{ayah_pos, range_of, AyahKey, Overlay, Selection, Spot};
+use quran_ui::MUSHAF;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 const QUL: &str = "https://qul.tarteel.ai/resources/similar-ayah";
@@ -14,13 +16,36 @@ const OVERVIEW_MAX: usize = 40;
 const CHIP_WORDS: usize = 4;
 
 fn dots(data: &Data) -> Vec<Spot> {
-    (0..data.keys.len())
-        .map(|a| {
-            let n = data.family_of[a].len() + data.variant_of[a].len();
-            let key = data.keys[a];
-            Spot { key, pos: data.pos[a], tip: format!("{}:{} · {}", key.0, key.1, plural(n, "similar group")), weight: n.min(3) as u8 }
+    let m = &*MUSHAF;
+    let mut within = 0;
+    let rukus: HashMap<AyahKey, (usize, usize)> = m
+        .ruku
+        .iter()
+        .map(|r| {
+            within = if r.ayah == 1 { 1 } else { within + 1 };
+            ((r.surah, r.ayah), (within, r.index + 1))
         })
-        .collect()
+        .filter(|(k, _)| k.1 != 1)
+        .collect();
+    let sajdahs: HashMap<AyahKey, usize> = m.sajdah.iter().enumerate().map(|(i, sj)| ((sj.surah, sj.ayah), i + 1)).collect();
+    let mut spots = vec![];
+    for surah in &m.surahs {
+        for ayah in 1..=surah.ayat {
+            let key = (surah.num as u8, ayah);
+            let n = data.slot.get(&key).map_or(0, |&a| data.family_of[a].len() + data.variant_of[a].len());
+            let ruku = rukus.get(&key).copied();
+            let sajdah = sajdahs.get(&key).copied();
+            let mut tip = format!("{}:{} · {}", key.0, key.1, if n == 0 { "no similar ayat".to_string() } else { plural(n, "similar group") });
+            if let Some((n, all)) = ruku {
+                tip += &format!(" · ruku' {n} of this surah starts ({all} overall)");
+            }
+            if let Some(sj) = sajdah {
+                tip += &format!(" · sajdah {sj}");
+            }
+            spots.push(Spot { key, pos: ayah_pos(key), tip, weight: n.min(3) as u8, ruku: ruku.is_some(), sajdah: sajdah.is_some() });
+        }
+    }
+    spots
 }
 
 fn related(data: &Data, a: usize, root: Option<usize>) -> Vec<AyahKey> {
@@ -81,13 +106,13 @@ pub fn SimilarAyah() -> Element {
             _ => vec![],
         };
         let mut marks = overlay.marks;
-        marks.set(keys.into_iter().map(|key| Spot { key, pos: ayah_pos(key), tip: format!("{}:{}", key.0, key.1), weight: 3 }).collect());
+        marks.set(keys.into_iter().map(|key| Spot { key, pos: ayah_pos(key), tip: format!("{}:{}", key.0, key.1), weight: 3, ..Spot::default() }).collect());
     });
 
     rsx! {
         style { {include_str!("../assets/similar.css")} }
         quran_ui::Page {
-            ruku: true,
+            ruku: false,
             title: rsx! {
                 h1 {
                     "آيات متشابهة"
