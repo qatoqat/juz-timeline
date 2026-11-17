@@ -1,5 +1,6 @@
 use crate::tree::{ayah_label, light, surah_name, unlight, Drill, Shared};
 use dioxus::prelude::*;
+use quran_ui::menu::{open_menu, Menu, Target};
 use quran_ui::overlay::{Overlay, Selection};
 
 const SPINE_PAD: usize = 2;
@@ -27,8 +28,10 @@ fn save_drill(on: bool) {
 pub fn Spine(data: Shared, ayah: usize, root: Signal<Option<usize>>) -> Element {
     let overlay = use_context::<Overlay>();
     let Drill(mut drill) = use_context::<Drill>();
+    let menu = use_context::<Signal<Option<Menu>>>();
     let d = data.0.clone();
     let words = d.words(ayah);
+    let (ks, ka) = d.keys[ayah];
     let current = root();
     let mut spans: Vec<(usize, usize, usize)> = d.family_of[ayah]
         .iter()
@@ -59,7 +62,14 @@ pub fn Spine(data: Shared, ayah: usize, root: Signal<Option<usize>>) -> Element 
     rsx! {
         div { class: "spine-wrap",
             div { class: "spine-head",
-                span { "{ayah_label(&d, ayah)} · " span { class: "ar", "{surah_name(&d, ayah)}" } " · {plural(d.family_of[ayah].len(), \"shared phrase\")}" }
+                span {
+                    class: "here",
+                    "data-tip": "Right-click for quran.com and bookmarks",
+                    oncontextmenu: move |e| open_menu(menu, &e, Target::Ayah(ks, ka)),
+                    "{ayah_label(&d, ayah)} · "
+                    span { class: "ar", "{surah_name(&d, ayah)}" }
+                }
+                span { " · {plural(d.family_of[ayah].len(), \"shared phrase\")}" }
                 if bars.len() > 1 { span { class: "hint", " · tap a bar to branch from that phrase" } }
                 button {
                     class: if drill() { "drill on" } else { "drill" },
@@ -113,6 +123,7 @@ pub fn Spine(data: Shared, ayah: usize, root: Signal<Option<usize>>) -> Element 
 pub fn Variants(data: Shared, ayah: usize) -> Element {
     let selection = use_context::<Selection>();
     let overlay = use_context::<Overlay>();
+    let menu = use_context::<Signal<Option<Menu>>>();
     let d = data.0.clone();
     let list = d.variant_of[ayah].clone();
     if list.is_empty() {
@@ -133,6 +144,10 @@ pub fn Variants(data: Shared, ayah: usize) -> Element {
                             onclick: {
                                 let key = d.keys[a];
                                 move |_| selection.show(key, overlay)
+                            },
+                            oncontextmenu: {
+                                let (s, n) = d.keys[a];
+                                move |e: MouseEvent| open_menu(menu, &e, Target::Ayah(s, n))
                             },
                             span { class: "ref", "{ayah_label(&d, a)} · {surah_name(&d, a)}" }
                             span { class: "cue", dir: "rtl",

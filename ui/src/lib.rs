@@ -1,5 +1,5 @@
 mod labels;
-mod menu;
+pub mod menu;
 pub mod overlay;
 mod progress;
 mod search;

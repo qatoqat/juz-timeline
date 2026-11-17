@@ -1,5 +1,7 @@
 use crate::data::{leaves, Data, Node};
+use crate::nav::Nav;
 use dioxus::prelude::*;
+use quran_ui::menu::{open_menu, Menu, Target};
 use quran_ui::overlay::{Overlay, Selection};
 use quran_ui::MUSHAF;
 use std::rc::Rc;
@@ -18,6 +20,9 @@ impl PartialEq for Shared {
 
 #[derive(Clone, Copy)]
 pub struct Drill(pub Signal<bool>);
+
+#[derive(Clone, Copy)]
+struct Root(usize);
 
 pub fn ayah_label(data: &Data, a: usize) -> String {
     let (s, n) = data.keys[a];
@@ -69,6 +74,9 @@ fn Branch(node: Node, before: bool, picked: usize) -> Element {
     let Drill(drill) = use_context::<Drill>();
     let overlay = use_context::<Overlay>();
     let selection = use_context::<Selection>();
+    let menu = use_context::<Signal<Option<Menu>>>();
+    let nav = use_context::<Nav>();
+    let Root(family) = use_context::<Root>();
     let mut open = use_signal(|| false);
     let mut revealed = use_signal(|| false);
     let height = node.leaves() as f32 * ROW;
@@ -130,8 +138,13 @@ fn Branch(node: Node, before: bool, picked: usize) -> Element {
                             let key = data.keys[a];
                             move |e: MouseEvent| {
                                 e.stop_propagation();
+                                nav.keep(family);
                                 selection.show(key, overlay);
                             }
+                        },
+                        oncontextmenu: {
+                            let (s, n) = data.keys[a];
+                            move |e: MouseEvent| open_menu(menu, &e, Target::Ayah(s, n))
                         },
                         "{ayah_label(&data, a)}"
                     }
@@ -152,6 +165,7 @@ fn Branch(node: Node, before: bool, picked: usize) -> Element {
 #[component]
 pub fn Tree(data: Shared, family: usize, picked: usize) -> Element {
     use_context_provider(|| data.clone());
+    use_context_provider(|| Root(family));
     let overlay = use_context::<Overlay>();
     let d = data.0.clone();
     let tree = d.tree(family, picked);

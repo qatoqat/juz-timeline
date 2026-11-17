@@ -78,3 +78,9 @@
   .member .ref { flex: none; }
 }
 .badge.late { border-style: dashed; }
+.navbar { display: flex; align-items: center; gap: 6px; margin-bottom: -6px; }
+.nav { font: inherit; font-size: 13px; padding: 2px 10px; border: 1px solid var(--line); border-radius: 12px; background: transparent; color: var(--ink); cursor: pointer; }
+.nav:hover:not(:disabled) { border-color: var(--soft); }
+.nav:disabled { opacity: 0.35; cursor: default; }
+.nav-pos { font-size: 12px; color: var(--soft); }
+.spine-head .here { cursor: context-menu; }

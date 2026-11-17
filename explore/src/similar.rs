@@ -1,4 +1,5 @@
 use crate::data::Data;
+use crate::nav::{Nav, NavBar};
 use crate::spine::{load_drill, plural, Spine, Variants};
 use crate::tree::{Drill, Shared, Tree};
 use dioxus::prelude::*;
@@ -49,6 +50,12 @@ pub fn SimilarAyah() -> Element {
     use_context_provider(|| Drill(Signal::new(load_drill())));
     let mut root = use_signal(|| None::<usize>);
     let mut pending = use_signal(|| None::<usize>);
+    let nav = use_context_provider(|| Nav::new(root, pending));
+    use_effect(move || {
+        if let (Some(f), Some(key)) = (root(), *overlay.picked.peek()) {
+            nav.record(key, f);
+        }
+    });
     use_future(move || async move {
         let mut fetch = document::eval(FETCH);
         if let Ok(text) = fetch.recv::<String>().await {
@@ -176,6 +183,7 @@ fn Panel(data: Option<Shared>, root: Signal<Option<usize>>, pending: Signal<Opti
             }
             match picked {
                 Some(a) => rsx! {
+                    NavBar {}
                     Spine { data: shared.clone(), ayah: a, root }
                     if let Some(f) = root() {
                         Tree { key: "{f}-{a}", data: shared.clone(), family: f, picked: a }

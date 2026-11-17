@@ -12,6 +12,7 @@ pub enum Target {
     Rub(usize),
     Sajdah(usize),
     Bookmark(usize),
+    Ayah(u8, u16),
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -60,6 +61,11 @@ fn describe(t: Target, progress: Progress) -> (String, String, u16) {
             let sj = &m.sajdah[i];
             (format!("Sajdah {} · {}:{}", i + 1, sj.surah, sj.ayah), format!("https://quran.com/{}/{}", sj.surah, sj.ayah), page_at(sj.pos))
         }
+        Target::Ayah(s, a) => {
+            let name = m.surahs[s as usize - 1].name;
+            let page = page_at(quran_core::model::page_pos(s, a));
+            (format!("{s}:{a} · {name} · page {page}"), format!("https://quran.com/{s}/{a}"), page)
+        }
         Target::Bookmark(i) => {
             let page = progress.bookmarks.peek().get(i).copied().unwrap_or(1);
             (format!("Bookmark · page {page}"), format!("https://quran.com/page/{page}"), page)
@@ -81,7 +87,11 @@ pub fn ContextMenu() -> Element {
     let (title, url, page) = describe(target, progress);
     let done = mark(target).map(|m| progress.done.read().has(m));
     let has_bookmarks = !progress.bookmarks.read().is_empty();
-    let rows = 2 + done.is_some() as usize + if matches!(target, Target::Bookmark(_)) { 1 } else { 1 + has_bookmarks as usize };
+    let existing = match target {
+        Target::Bookmark(i) => Some(i),
+        _ => progress.bookmarks.read().iter().position(|&p| p == page),
+    };
+    let rows = 2 + done.is_some() as usize + if existing.is_some() { 1 } else { 1 + has_bookmarks as usize };
     let (vw, vh) = web_sys::window()
         .and_then(|w| Some((w.inner_width().ok()?.as_f64()?, w.inner_height().ok()?.as_f64()?)))
         .unwrap_or((1200.0, 800.0));
@@ -116,14 +126,14 @@ pub fn ContextMenu() -> Element {
                     if is_done { "Unmark done" } else { "Mark as done" }
                 }
             }
-            if let Target::Bookmark(i) = target {
+            if let Some(i) = existing {
                 button {
                     class: "danger",
                     onclick: move |_| {
                         progress.remove_bookmark(i);
                         close();
                     },
-                    "Remove bookmark"
+                    if matches!(target, Target::Bookmark(_)) { "Remove bookmark" } else { "Remove bookmark on page {page}" }
                 }
             } else {
                 button {
