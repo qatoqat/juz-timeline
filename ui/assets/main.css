@@ -119,6 +119,7 @@ h1 > a { direction: ltr; }
 .spot.w1 { background: color-mix(in srgb, var(--sj) 55%, transparent); }
 .spot.w2 { background: color-mix(in srgb, var(--sj) 78%, transparent); }
 .spot.w3 { background: var(--sj); }
+.spot.w0 { border-color: var(--line); }
 .spot.w0 .rk-in { color: var(--sj); }
 .spot .rk-in { font-style: normal; font-weight: 500; pointer-events: none; display: block; line-height: 1; transform: translateY(-0.3em); }
 .spot.sajdah { border: 0; background: transparent; border-radius: 0; color: var(--sj); }
