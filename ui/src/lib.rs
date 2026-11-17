@@ -10,7 +10,7 @@ mod track;
 
 use dioxus::prelude::*;
 pub use quran_core::{data, model, MUSHAF};
-pub use fresh::Fresh;
+pub use fresh::Stale;
 use track::{span_of, Track};
 
 

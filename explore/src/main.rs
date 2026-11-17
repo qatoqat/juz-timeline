@@ -57,7 +57,10 @@ fn App() -> Element {
     } else {
         rsx! { List {} }
     };
-    rsx! { quran_ui::Fresh { {page} } }
+    rsx! {
+        {page}
+        quran_ui::Stale {}
+    }
 }
 
 #[component]
