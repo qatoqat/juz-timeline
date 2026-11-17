@@ -1,3 +1,4 @@
+mod card;
 mod data;
 mod nav;
 mod similar;

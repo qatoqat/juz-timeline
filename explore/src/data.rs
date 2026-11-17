@@ -85,6 +85,30 @@ pub fn leaves(nodes: &[Node]) -> usize {
     nodes.iter().map(Node::leaves).sum::<usize>().max(1)
 }
 
+const CUE_TAIL: usize = 2;
+const CUE_MIN: usize = 3;
+const CUE_BEFORE: usize = 2;
+
+#[derive(Clone, PartialEq)]
+pub struct Row {
+    pub ayah: usize,
+    pub before: Vec<String>,
+    pub before_cue: Option<usize>,
+    pub before_more: bool,
+    pub after: Vec<String>,
+    pub after_cue: Option<usize>,
+    pub after_more: bool,
+}
+
+fn diverge(seqs: &[Vec<Word>], i: usize) -> usize {
+    seqs.iter()
+        .enumerate()
+        .filter(|&(j, _)| j != i)
+        .map(|(_, other)| seqs[i].iter().zip(other).take_while(|(a, b)| a.0 == b.0).count())
+        .max()
+        .unwrap_or(0)
+}
+
 pub struct TreeData {
     pub after: Vec<Node>,
     pub before: Vec<Node>,
@@ -217,6 +241,34 @@ impl Data {
         late.truncate(LATE_LIMIT);
         late.sort_by_key(|&(a, ..)| a);
         late.into_iter().map(|(a, p, _)| Item { ayah: a, late: true, seq: self.seq(a, p..self.words(a).len()) }).collect()
+    }
+
+    pub fn rows(&self, family: usize) -> Vec<Row> {
+        let fam = &self.families[family];
+        let after: Vec<Vec<Word>> = fam.members.iter().map(|&(a, s)| self.seq(a, s + fam.len..self.words(a).len())).collect();
+        let before: Vec<Vec<Word>> = fam.members.iter().map(|&(a, s)| self.seq(a, (0..s).rev())).collect();
+        let mut rows: Vec<Row> = fam
+            .members
+            .iter()
+            .enumerate()
+            .map(|(i, &(a, _))| {
+                let after_cue = diverge(&after, i);
+                let before_cue = diverge(&before, i);
+                let after_shown = (after_cue + CUE_TAIL).min(after[i].len()).max(after[i].len().min(CUE_MIN));
+                let before_shown = (before_cue + 1).min(before[i].len()).max(before[i].len().min(CUE_BEFORE));
+                Row {
+                    ayah: a,
+                    before: display(&before[i][..before_shown], true),
+                    before_cue: (before_cue < before[i].len()).then(|| before_shown - 1 - before_cue),
+                    before_more: before_shown < before[i].len(),
+                    after: display(&after[i][..after_shown], false),
+                    after_cue: (after_cue < after[i].len()).then_some(after_cue),
+                    after_more: after_shown < after[i].len(),
+                }
+            })
+            .collect();
+        rows.sort_by(|x, y| x.after.first().cmp(&y.after.first()).then(x.ayah.cmp(&y.ayah)));
+        rows
     }
 
     pub fn late_ayat(&self, root: usize, picked: usize) -> Vec<usize> {

@@ -1,7 +1,10 @@
+use crate::card::{Card, Quiz};
 use crate::data::Data;
 use crate::nav::{Nav, NavBar};
 use crate::spine::{load_drill, plural, Spine, Variants};
 use crate::tree::{Drill, Shared, Tree};
+
+const CARD_MAX: usize = 4;
 use dioxus::prelude::*;
 use quran_ui::overlay::{ayah_pos, range_of, AyahKey, Overlay, Selection, Spot};
 use quran_ui::MUSHAF;
@@ -141,6 +144,7 @@ fn Chips(data: Shared, title: Option<String>, families: Vec<usize>, pick: EventH
 fn Panel(data: Option<Shared>, root: Signal<Option<usize>>, pending: Signal<Option<usize>>) -> Element {
     let overlay = use_context::<Overlay>();
     let selection = use_context::<Selection>();
+    let Drill(drill) = use_context::<Drill>();
     let mut query = use_signal(String::new);
     let mut all = use_signal(|| false);
     let Some(shared) = data else { return rsx! { p { class: "groups-note", "Loading similar ayat…" } } };
@@ -202,7 +206,14 @@ fn Panel(data: Option<Shared>, root: Signal<Option<usize>>, pending: Signal<Opti
                     NavBar {}
                     Spine { data: shared.clone(), ayah: a, root }
                     if let Some(f) = root() {
-                        Tree { key: "{f}-{a}", data: shared.clone(), family: f, picked: a }
+                        if d.families[f].members.len() <= CARD_MAX {
+                            Card { key: "c{f}-{a}", data: shared.clone(), family: f, picked: a }
+                        } else {
+                            Tree { key: "{f}-{a}", data: shared.clone(), family: f, picked: a }
+                        }
+                        if drill() {
+                            Quiz { key: "q{f}", data: shared.clone(), family: f }
+                        }
                     }
                     Variants { data: shared.clone(), ayah: a }
                 },

@@ -17,7 +17,6 @@ pub struct Spot {
 }
 
 const SPOT_MAX: f32 = 15.0;
-const SPOT_MIN: f32 = 4.0;
 const RUKU_MIN: f32 = 11.0;
 
 #[derive(Clone, Copy)]
@@ -59,7 +58,7 @@ pub fn ayah_pos(key: AyahKey) -> f32 {
 }
 
 #[component]
-pub fn OverlayLane(lo: f32, hi: f32, detail: bool, width: f32) -> Element {
+pub fn OverlayLane(lo: f32, hi: f32, detail: bool) -> Element {
     let Some(overlay) = try_use_context::<Overlay>() else { return rsx! {} };
     let selection = use_context::<Selection>();
     let menu = use_context::<Signal<Option<Menu>>>();
@@ -71,10 +70,7 @@ pub fn OverlayLane(lo: f32, hi: f32, detail: bool, width: f32) -> Element {
     let source: Vec<Spot> = if detail { overlay.dots.read().clone() } else { overlay.marks.read().clone() };
     let mut spots: Vec<(Spot, f32)> = source.into_iter().filter(|s| inside(s.pos)).map(|s| { let px = x(s.pos); (s, px) }).collect();
     spots.sort_by(|a, b| a.1.total_cmp(&b.1));
-    let mut gaps: Vec<f32> = spots.windows(2).map(|w| (w[1].1 - w[0].1) * width / 100.0).collect();
-    gaps.sort_by(f32::total_cmp);
-    let tight = gaps.get(gaps.len() / 5).copied().unwrap_or(SPOT_MAX * 2.0);
-    let size = if detail { (tight * 0.9).clamp(SPOT_MIN, SPOT_MAX) } else { 8.0 };
+    let size = if detail { SPOT_MAX } else { 8.0 };
 
     rsx! {
         div { class: if detail { "lane dots" } else { "lane marks" },
@@ -85,9 +81,10 @@ pub fn OverlayLane(lo: f32, hi: f32, detail: bool, width: f32) -> Element {
                         b {
                             key: "{s}:{a}",
                             class: format!(
-                                "spot w{}{}{}{}{}",
+                                "spot w{}{}{}{}{}{}",
                                 spot.weight.min(3),
                                 if spot.sajdah { " sajdah" } else { "" },
+                                if spot.ruku { " ruku" } else { "" },
                                 if picked == Some(spot.key) { " picked" } else { "" },
                                 if detail && marked.contains(&spot.key) { " marked" } else { "" },
                                 if hot.contains(&spot.key) { " hot" } else { "" },
