@@ -1,6 +1,7 @@
 mod card;
 mod data;
 mod nav;
+mod overview;
 mod similar;
 mod spine;
 mod themes;

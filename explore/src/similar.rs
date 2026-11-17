@@ -1,5 +1,7 @@
 use crate::card::{Card, Quiz};
 use crate::data::Data;
+use crate::overview::{ruku_cells, RukuList};
+use quran_ui::band::Band;
 use crate::nav::{Nav, NavBar};
 use crate::spine::{load_drill, plural, Spine, Variants};
 use crate::tree::{Drill, Shared, Tree};
@@ -14,8 +16,6 @@ use std::rc::Rc;
 const QUL: &str = "https://qul.tarteel.ai/resources/similar-ayah";
 const FETCH: &str = r#"fetch("similar.json").then(r => r.text()).then(t => dioxus.send(t))"#;
 const SEARCH_LIMIT: usize = 12;
-const OVERVIEW_FIRST: usize = 12;
-const OVERVIEW_MAX: usize = 40;
 const CHIP_WORDS: usize = 4;
 
 fn dots(data: &Data) -> Vec<Spot> {
@@ -67,6 +67,7 @@ pub fn SimilarAyah() -> Element {
         hot: Signal::new(vec![]),
     });
     use_context_provider(|| Drill(Signal::new(load_drill())));
+    let band = use_context_provider(|| Band { cells: Signal::new(vec![]), hovered: Signal::new(None), chosen: Signal::new(None) });
     let mut root = use_signal(|| None::<usize>);
     let mut pending = use_signal(|| None::<usize>);
     let nav = use_context_provider(|| Nav::new(root, pending));
@@ -81,6 +82,8 @@ pub fn SimilarAyah() -> Element {
             if let Some(d) = Data::parse(&text) {
                 let mut dots_signal = overlay.dots;
                 dots_signal.set(dots(&d));
+                let mut cells = band.cells;
+                cells.set(ruku_cells(&d));
                 data.set(Some(Rc::new(d)));
             }
         }
@@ -146,21 +149,12 @@ fn Panel(data: Option<Shared>, root: Signal<Option<usize>>, pending: Signal<Opti
     let selection = use_context::<Selection>();
     let Drill(drill) = use_context::<Drill>();
     let mut query = use_signal(String::new);
-    let mut all = use_signal(|| false);
     let Some(shared) = data else { return rsx! { p { class: "groups-note", "Loading similar ayat…" } } };
     let d = shared.0.clone();
     let range = (selection.selected)().map(range_of);
     let picked = (overlay.picked)().and_then(|key| d.slot.get(&key).copied());
     let searching = !query().trim().is_empty();
     let results = d.search(&query(), SEARCH_LIMIT);
-    let (inside, elsewhere) = match (picked, range) {
-        (None, Some((lo, hi))) if !searching => d.in_range(lo, hi),
-        _ => (vec![], vec![]),
-    };
-    let limit = if all() { OVERVIEW_MAX } else { OVERVIEW_FIRST };
-    let more = inside.len() + elsewhere.len() > limit;
-    let inside_shown: Vec<usize> = inside.iter().copied().take(limit).collect();
-    let elsewhere_shown: Vec<usize> = elsewhere.iter().copied().take(limit.saturating_sub(inside_shown.len())).collect();
 
     let pick_d = d.clone();
     let pick = move |f: usize| {
@@ -190,20 +184,23 @@ fn Panel(data: Option<Shared>, root: Signal<Option<usize>>, pending: Signal<Opti
                 if searching && results.is_empty() { span { class: "groups-note", "No shared phrase matches." } }
             }
             if searching && !results.is_empty() {
-                Chips { data: shared.clone(), title: None, families: results, pick: pick.clone() }
-            }
-            if !inside_shown.is_empty() {
-                Chips { data: shared.clone(), title: Some("Repeated inside this selection".to_string()), families: inside_shown, pick: pick.clone() }
-            }
-            if !elsewhere_shown.is_empty() {
-                Chips { data: shared.clone(), title: Some("Shared with other surahs".to_string()), families: elsewhere_shown, pick }
-            }
-            if more && !searching && picked.is_none() {
-                button { class: "chips-more", onclick: move |_| all.toggle(), if all() { "Show fewer" } else { "Show more" } }
+                Chips { data: shared.clone(), title: None, families: results, pick }
             }
             match picked {
                 Some(a) => rsx! {
-                    NavBar {}
+                    div { class: "picked-bar",
+                        NavBar {}
+                        if range.is_some() {
+                            button {
+                                class: "nav",
+                                onclick: move |_| {
+                                    let mut picked = overlay.picked;
+                                    picked.set(None);
+                                },
+                                "Ruku' list"
+                            }
+                        }
+                    }
                     Spine { data: shared.clone(), ayah: a, root }
                     if let Some(f) = root() {
                         if d.families[f].members.len() <= CARD_MAX {
@@ -218,6 +215,9 @@ fn Panel(data: Option<Shared>, root: Signal<Option<usize>>, pending: Signal<Opti
                     Variants { data: shared.clone(), ayah: a }
                 },
                 None if (overlay.picked)().is_some() => rsx! { p { class: "groups-note", "This ayah has no similar ayat in this data." } },
+                None if !searching && range.is_some() => rsx! {
+                    RukuList { data: shared.clone(), lo: range.map_or(0.0, |r| r.0), hi: range.map_or(0.0, |r| r.1), pending }
+                },
                 None if range.is_none() && !searching => rsx! {
                     p { class: "groups-note", "Select a surah or juz to see its shared phrases, click a dot under the rub' row, or search a phrase." }
                 },

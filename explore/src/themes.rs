@@ -59,6 +59,7 @@ fn cells(themes: &[Theme]) -> Vec<Cell> {
                 label: t.text.clone(),
                 tip: format!("{}:{}–{} · {}", t.surah, t.from, t.to, t.text),
                 heavy: (r.surah, r.ayah) == (t.surah, t.from),
+                level: 0,
             }
         })
         .collect()
@@ -170,6 +171,7 @@ fn Outline(themes: Option<Shared>) -> Element {
                     if searching { "No theme matches." } else { "Select a surah or juz to see its themes, or search above." }
                 }
             }
+            div { class: "outline-list",
             for (r, members) in groups {
                 {
                     let ruku = &MUSHAF.ruku[r];
@@ -211,6 +213,7 @@ fn Outline(themes: Option<Shared>) -> Element {
                         }
                     }
                 }
+            }
             }
         }
     }

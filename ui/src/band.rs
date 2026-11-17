@@ -13,6 +13,7 @@ pub struct Cell {
     pub label: String,
     pub tip: String,
     pub heavy: bool,
+    pub level: u8,
 }
 
 #[derive(Clone, Copy)]
@@ -60,7 +61,8 @@ pub fn BandLane(lo: f32, hi: f32, width: f32) -> Element {
                 div {
                     key: "{cell.id}",
                     class: format!(
-                        "theme{}{}{}{}",
+                        "theme l{}{}{}{}{}",
+                        cell.level,
                         if n % 2 == 1 { " even" } else { "" },
                         if cell.heavy { " heavy" } else { "" },
                         if hot == Some(cell.id) { " hot" } else { "" },

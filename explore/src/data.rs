@@ -182,24 +182,6 @@ impl Data {
         hits
     }
 
-    pub fn in_range(&self, lo: f32, hi: f32) -> (Vec<usize>, Vec<usize>) {
-        let count = |f: usize| self.families[f].members.iter().filter(|m| self.pos[m.0] >= lo && self.pos[m.0] < hi).count();
-        let mut ranked: Vec<(usize, usize)> = (0..self.families.len()).map(|f| (f, count(f))).filter(|&(_, n)| n > 0).collect();
-        ranked.sort_by_key(|&(f, _)| usize::MAX - self.weight(f));
-        let mut shown: Vec<usize> = vec![];
-        let (mut inside, mut elsewhere) = (vec![], vec![]);
-        for (f, n) in ranked {
-            let members: Vec<usize> = self.families[f].members.iter().map(|m| m.0).collect();
-            let covered = shown.iter().any(|&g| members.iter().all(|a| self.families[g].members.iter().any(|m| m.0 == *a)));
-            if covered {
-                continue;
-            }
-            shown.push(f);
-            if n >= 2 { inside.push(f) } else { elsewhere.push(f) }
-        }
-        (inside, elsewhere)
-    }
-
     pub fn default_root(&self, ayah: usize) -> Option<usize> {
         self.family_of[ayah].iter().copied().max_by_key(|&f| (self.weight(f), self.families[f].len))
     }
