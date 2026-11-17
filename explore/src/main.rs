@@ -104,9 +104,9 @@ fn List() -> Element {
                 }
             }
             footer { class: "sources",
-                "Data: "
-                a { href: "https://quran.com", target: "_blank", rel: "noopener", "quran.com API ↗" }
-                " (fetched {quran_ui::data::DATA_FETCHED}) · ayah themes: Muhammad Farooq-i-Azam Malik's ruku' headings via "
+                "Quran text and data: "
+                a { href: "https://quran.foundation", target: "_blank", rel: "noopener", "Quran Foundation / quran.com ↗" }
+                " (synced {quran_ui::data::DATA_FETCHED}; page layout: King Fahd Complex 1441 AH print) · ayah themes: Muhammad Farooq-i-Azam Malik's ruku' headings via "
                 a { href: "{QUL}/ayah-theme", target: "_blank", rel: "noopener", "QUL ↗" }
             }
         }

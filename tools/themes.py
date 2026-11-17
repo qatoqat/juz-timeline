@@ -1,7 +1,7 @@
 """Build explore/assets/themes.json from QUL's ayah-theme export, aligned to quran.com's ruku'.
 
-Inputs: tools/.cache/ayah-themes.db.zip (QUL sqlite download) and the quran.com cache
-(tools/fetch_quran_com.sh). Themes that cross a quran.com ruku' boundary are split there, and
+Inputs: tools/data/ayah-themes.db.zip (QUL sqlite download) and the Quran Foundation Content Sync
+snapshot (tools/sync_qf.py). Themes that cross a quran.com ruku' boundary are split there, and
 ayat with no theme get a "no theme" entry carrying the opening words of their first ayah, so
 every ayah belongs to exactly one entry and every entry sits inside one ruku'.
 
@@ -13,6 +13,8 @@ import pathlib
 import sqlite3
 import zipfile
 
+from qf import quran
+
 ROOT = pathlib.Path(__file__).resolve().parent
 CACHE = ROOT / ".cache"
 ZIP = ROOT / "data" / "ayah-themes.db.zip"
@@ -23,26 +25,18 @@ THEME, CONTINUED, NONE = 0, 1, 2
 
 
 def quran_com():
-    verses, counts, ruku = {}, {}, set()
-    for s in range(1, 115):
-        prev = None
-        for v in json.loads((CACHE / "quran-com" / f"{s}.json").read_text(encoding="utf-8"))["verses"]:
-            a = v["verse_number"]
-            verses[(s, a)] = v["text_imlaei"]
-            counts[s] = a
-            if v["ruku_number"] != prev:
-                ruku.add((s, a))
-                prev = v["ruku_number"]
+    verses, counts, ruku, prev = {}, {}, set(), None
+    for v in quran().verses:
+        s, a = v["key"]
+        verses[(s, a)] = v["words"]
+        counts[s] = a
+        if v["ruku_number"] != prev:
+            ruku.add((s, a))
+            prev = v["ruku_number"]
     return verses, counts, ruku
 
 
-def opening(text):
-    words = []
-    for token in text.split():
-        if all(0x064B <= ord(c) <= 0x065F or 0x06D6 <= ord(c) <= 0x06ED for c in token) and words:
-            words[-1] += "\u00a0" + token
-        else:
-            words.append(token)
+def opening(words):
     return " ".join(words[:OPENING_WORDS]) + (" …" if len(words) > OPENING_WORDS else "")
 
 

@@ -26,16 +26,12 @@ python -m http.server -d dist
 
 ## Data
 
-Refresh everything from the quran.com API and check it (fails on any conflict):
+All Quran data comes from **Quran Foundation Content Sync** (the quran.com content API), under the [developer terms](https://api-docs.quran.foundation/legal/developer-terms/):
 
-```sh
-tools/rebuild_data.sh            # fetch, regenerate core/src/data.rs, similar.json, themes.json, then check
-tools/rebuild_data.sh --cached   # regenerate from the existing cache only
-```
-
-`.github/workflows/refresh-data.yml` runs this twice a week and redeploys, so cached quran.com content is never older than a week, as the [Quran Foundation developer terms](https://api-docs.quran.foundation/legal/developer-terms/) require. The Quran text is shown as delivered (waqf signs kept); only the matching step uses a normalised copy.
-
-- Main source: the [quran.com API](https://api-docs.quran.com). `tools/fetch_quran_com.sh` caches every chapter and verse (text, page, juz, rub', ruku', manzil, sajdah, word line numbers); `tools/gen_data.py` builds `core/src/data.rs` from it.
-- Sajdah: quran.com lists 14; 22:77, which the Madani mushaf marks and the Shafi'i and Hanbali schools count, is added and flagged (white symbol, note in the right-click menu).
-- Similar ayah: `tools/similar.py` builds `explore/assets/similar.json` from quran.com's text (text_imlaei for display, text_imlaei_simple for matching): shared phrases of 3+ words found in 2–12 ayat, plus close variants aligned word by word. The page draws large families as a two-sided right-to-left word tree (after the DoubleTree design by Culy & Lyding) and small ones as aligned cards.
-- Ayah themes: the ruku' section headings of Muhammad Farooq-i-Azam Malik's translation of the Quran, as digitised in QUL's ayah-theme dataset ([qul.tarteel.ai](https://qul.tarteel.ai/resources/ayah-theme)). Built by `tools/themes.py` from the sqlite download and aligned to quran.com's ruku': themes crossing a ruku' are split there, and ayat with no theme are marked as such with their opening words.
+- `tools/sync_qf.py` downloads fresh snapshots of `quran_core:1` (Imla'i text, juz, hizb, rub', ruku', manzil, sajdah) and `mushafs:1` (QCF V2, the King Fahd Complex **1441 AH** print, for page and line numbers). It needs a confidential client with `content.quran.read` and `content.sync.read`: set `QF_CLIENT_ID` / `QF_CLIENT_SECRET`, or put `CLIENT_ID=` / `CLIENT_SECRET=` lines in `~/.config/juz-timeline/quran_foundation_credentials.txt`.
+- `tools/rebuild_data.sh` syncs, regenerates `core/src/data.rs`, `explore/assets/similar.json` and `explore/assets/themes.json`, then runs `tools/check_data.py`, which fails on any overlap, gap, ruku' crossing, stale generated code or bad reference. `--cached` skips the sync.
+- `.github/workflows/refresh-data.yml` does this twice a week with the credentials stored as repository secrets and redeploys, so no copy is older than the terms' 7 days.
+- The Quran text is shown as delivered (waqf signs kept); only matching uses a normalised copy.
+- Sajdah: quran.com lists 14; 22:77, which the Madani mushaf marks and the Shafi'i and Hanbali schools count, is added and flagged (white symbol, note in its menu).
+- Similar ayah: `tools/similar.py` finds shared phrases of 3+ words in 2–12 ayat plus close variants aligned word by word. Large families are drawn as a two-sided right-to-left word tree (after the DoubleTree design by Culy & Lyding), small ones as aligned cards.
+- Ayah themes: the ruku' headings of Muhammad Farooq-i-Azam Malik's translation, as digitised in QUL's ayah-theme dataset ([qul.tarteel.ai](https://qul.tarteel.ai/resources/ayah-theme)), kept in `tools/data/`. `tools/themes.py` aligns them to quran.com's ruku' (splitting any theme that crosses one) and marks ayat without a theme with their opening words.

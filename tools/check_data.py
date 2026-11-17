@@ -1,16 +1,16 @@
-"""Validate generated data against the quran.com cache; exits non-zero on any conflict.
+"""Validate generated data against the Content Sync snapshots; exits non-zero on any conflict.
 
 Run: python tools/check_data.py
 """
 import json
 import pathlib
-import re
 import subprocess
 import sys
 
+from qf import plain, quran
+
 ROOT = pathlib.Path(__file__).resolve().parent
 REPO = ROOT.parent
-CACHE = ROOT / ".cache" / "quran-com"
 errors = []
 
 
@@ -20,12 +20,12 @@ def expect(ok, message):
 
 
 def main():
-    chapters = json.loads((CACHE / "chapters.json").read_text())["chapters"]
-    verses = [v for s in range(1, 115) for v in json.loads((CACHE / f"{s}.json").read_text(encoding="utf-8"))["verses"]]
-    counts = {c["id"]: c["verses_count"] for c in chapters}
+    q = quran()
+    chapters, verses = q.chapters, q.verses
+    counts = {c["chapter_number"]: c["verses_count"] for c in chapters}
     expect(len(chapters) == 114, f"{len(chapters)} chapters")
     expect(len(verses) == 6236 == sum(counts.values()), f"{len(verses)} verses vs {sum(counts.values())} counted")
-    for field, total in [("juz_number", 30), ("page_number", 604), ("rub_el_hizb_number", 240), ("manzil_number", 7)]:
+    for field, total in [("juz_number", 30), ("page", 604), ("rub_el_hizb_number", 240), ("manzil_number", 7)]:
         values = [v[field] for v in verses]
         expect(values == sorted(values) and len(set(values)) == total, f"{field}: not 1..{total} in order")
     ruku = [v["ruku_number"] for v in verses]
@@ -35,7 +35,7 @@ def main():
     for s in range(1, 115):
         expect(any(surah_of(v) == s and v["verse_number"] == 1 for v in starts), f"surah {s} does not open a ruku'")
 
-    generated = subprocess.run([sys.executable, "-I", str(ROOT / "gen_data.py")], capture_output=True, text=True, check=True).stdout
+    generated = subprocess.run([sys.executable, str(ROOT / "gen_data.py")], capture_output=True, text=True, check=True).stdout
     committed = (REPO / "core" / "src" / "data.rs").read_text(encoding="utf-8")
     expect(generated.strip() == committed.strip(), "core/src/data.rs is out of date: run tools/gen_data.py")
 
@@ -45,6 +45,8 @@ def main():
         expect(len(members) >= 2, f"family {f} has {len(members)} member")
         for a, start in members:
             expect(start + length <= words[a], f"family {f} runs past ayah {similar['a'][a][:2]}")
+    empty = [row[:2] for row in similar["a"] for w in row[2].split(" ") if not plain(w)]
+    expect(not empty, f"similar.json has sign-only words in {empty[:3]}")
     keys = {(int(v["verse_key"].split(":")[0]), v["verse_number"]) for v in verses}
     expect(all((row[0], row[1]) in keys for row in similar["a"]), "similar.json references an unknown ayah")
 

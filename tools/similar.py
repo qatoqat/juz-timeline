@@ -1,6 +1,7 @@
 """Build explore/assets/similar.json: shared-phrase families and close variants.
 
-Text: quran.com API (text_imlaei for display, text_imlaei_simple for matching), cached by tools/fetch_quran_com.sh.
+Text: Quran Foundation Content Sync (quran_core:1 word-level Imla'i text, via tools/sync_qf.py);
+display keeps the text as delivered, matching uses a normalised copy (tools/qf.py plain()).
 Run: python tools/similar.py
 """
 import collections
@@ -8,8 +9,9 @@ import json
 import pathlib
 import re
 
+from qf import plain, quran
+
 ROOT = pathlib.Path(__file__).resolve().parent
-CACHE = ROOT / ".cache"
 OUT = ROOT.parent / "explore" / "assets" / "similar.json"
 
 MIN_WORDS, MAX_WORDS = 3, 30
@@ -20,31 +22,9 @@ VARIANT_RATIO = 0.7
 VARIANT_MIN_WORDS = 4
 
 
-def is_mark(token):
-    return all(0x064B <= ord(c) <= 0x065F or 0x06D6 <= ord(c) <= 0x06ED for c in token)
-
-
-def with_marks(text):
-    """Words of the text with each waqf sign kept, attached to the word before it by a no-break space."""
-    words = []
-    for token in text.split():
-        if is_mark(token) and words:
-            words[-1] += "\u00a0" + token
-        else:
-            words.append(token)
-    return words
-
-
 def load():
-    """(surah, ayah, display words, plain words) from the quran.com cache (tools/fetch_quran_com.sh)."""
-    rows = []
-    for s in range(1, 115):
-        for v in json.loads((CACHE / "quran-com" / f"{s}.json").read_text(encoding="utf-8"))["verses"]:
-            shown = with_marks(v["text_imlaei"])
-            plain = v["text_imlaei_simple"].split()
-            assert len(shown) == len(plain), v["verse_key"]
-            rows.append((s, v["verse_number"], shown, plain))
-    return rows
+    """(surah, ayah, display words, plain words) from the Content Sync snapshot (tools/sync_qf.py)."""
+    return [(v["key"][0], v["key"][1], v["words"], [plain(w) for w in v["words"]]) for v in quran().verses]
 
 
 def norm(w):

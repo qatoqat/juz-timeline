@@ -1,11 +1,11 @@
 #!/bin/sh
-# Refresh every generated data file from the quran.com API and check it.
-#   tools/rebuild_data.sh           fetch fresh data, regenerate, check
-#   tools/rebuild_data.sh --cached  regenerate from the existing cache only
+# Refresh every generated data file from Quran Foundation Content Sync and check it.
+#   tools/rebuild_data.sh           sync fresh snapshots, regenerate, check
+#   tools/rebuild_data.sh --cached  regenerate from the existing snapshots only
 set -e
 cd "$(dirname "$0")"
-[ "$1" = "--cached" ] || ./fetch_quran_com.sh
-python -I gen_data.py > ../core/src/data.rs
-python -I similar.py
-python -I themes.py
-python -I check_data.py
+[ "$1" = "--cached" ] || python sync_qf.py
+python gen_data.py > ../core/src/data.rs.tmp && mv ../core/src/data.rs.tmp ../core/src/data.rs
+python similar.py
+python themes.py
+python check_data.py
