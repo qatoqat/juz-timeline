@@ -28,13 +28,14 @@ struct Item {
     about: &'static str,
     slug: &'static str,
     ready: bool,
+    experimental: bool,
 }
 
 const RELATIONS: [Item; 4] = [
-    Item { name: "Mutashabihat", arabic: "متشابهات", count: "5,278", scope: "phrase ↔ phrase", about: "Repeated phrases with small wording differences.", slug: "mutashabihat", ready: false },
-    Item { name: "Similar ayah", arabic: "آيات متشابهة", count: "4,001", scope: "ayah ↔ ayah", about: "Ayat that match in meaning, context or wording, with a score.", slug: "similar-ayah", ready: true },
-    Item { name: "Ayah themes", arabic: "مواضيع الآيات", count: "1,049", scope: "ayah range", about: "Core theme of each group of ayat.", slug: "ayah-theme", ready: true },
-    Item { name: "Concepts", arabic: "المفاهيم", count: "284", scope: "concept ↔ concept", about: "Quranic Arabic Corpus concepts, the ayat they appear in, and how they relate.", slug: "ayah-topics", ready: true },
+    Item { name: "Mutashabihat", arabic: "متشابهات", count: "5,278", scope: "phrase ↔ phrase", about: "Repeated phrases with small wording differences.", slug: "mutashabihat", ready: false, experimental: false },
+    Item { name: "Similar ayah", arabic: "آيات متشابهة", count: "4,001", scope: "ayah ↔ ayah", about: "Ayat that match in meaning, context or wording, with a score.", slug: "similar-ayah", ready: true, experimental: false },
+    Item { name: "Ayah themes", arabic: "مواضيع الآيات", count: "1,049", scope: "ayah range", about: "Core theme of each group of ayat.", slug: "ayah-theme", ready: true, experimental: false },
+    Item { name: "Concepts", arabic: "المفاهيم", count: "284", scope: "concept ↔ concept", about: "Quranic Arabic Corpus concepts, the ayat they appear in, and how they relate.", slug: "ayah-topics", ready: true, experimental: true },
 ];
 
 fn main() {
@@ -109,6 +110,7 @@ fn List() -> Element {
                             div { class: "foot",
                                 Source { href: format!("{QUL}/{}", it.slug) }
                                 if !it.ready { span { class: "tag", "Soon" } }
+                                if it.experimental { span { class: "tag", "Experimental" } }
                             }
                         }
                     }

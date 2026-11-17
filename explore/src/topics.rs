@@ -143,6 +143,7 @@ pub fn TopicsPage() -> Element {
                 h1 {
                     "المفاهيم"
                     span { class: "sub", "Concepts" }
+                    span { class: "exp", "data-tip": "Concept tags come straight from the Corpus ontology: useful for a first look, but sparse and uneven", "Experimental" }
                     a { class: "explore", href: "../", "Explore" }
                     a { class: "explore", href: "{CORPUS}", target: "_blank", rel: "noopener", "Source ↗" }
                 }
