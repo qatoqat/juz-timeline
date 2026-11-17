@@ -1,24 +1,55 @@
 name: Deploy to GitHub Pages
 
+# Quran data is never committed: every deploy syncs fresh snapshots from Quran Foundation Content Sync,
+# regenerates and checks the data, then builds. The schedule keeps the deployed copy under the
+# developer terms' 7 days. A failed check stops the deploy (GitHub emails the failure); data that
+# changed since the last deploy opens an issue listing what changed (hashes and counts only).
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: "17 3 * * 1,4"
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.fingerprint.outputs.changed }}
+      changes: ${{ steps.fingerprint.outputs.changes }}
+      lock: ${{ steps.fingerprint.outputs.lock }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Sync Quran data, regenerate and check
+        run: tools/rebuild_data.sh
+        env:
+          QF_CLIENT_ID: ${{ secrets.QF_CLIENT_ID }}
+          QF_CLIENT_SECRET: ${{ secrets.QF_CLIENT_SECRET }}
+      - name: Compare with the last deployed data
+        id: fingerprint
+        run: |
+          set +e
+          changes=$(python tools/fingerprint.py)
+          code=$?
+          set -e
+          echo "$changes"
+          [ $code -eq 0 ] || [ $code -eq 3 ] || exit $code
+          python tools/fingerprint.py --write
+          {
+            echo "changed=$([ $code -eq 3 ] && echo true || echo false)"
+            echo "changes<<EOF_CHANGES"; echo "$changes"; echo "EOF_CHANGES"
+            echo "lock<<EOF_LOCK"; cat tools/data.lock.json; echo "EOF_LOCK"
+          } >> "$GITHUB_OUTPUT"
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
@@ -34,9 +65,38 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  report:
+    needs: [build, deploy]
+    if: needs.build.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Record the new fingerprint and open an issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANGES: ${{ needs.build.outputs.changes }}
+          LOCK: ${{ needs.build.outputs.lock }}
+        run: |
+          printf '%s\n' "$LOCK" > tools/data.lock.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/data.lock.json
+          git commit -m "Update Quran data fingerprint"
+          git pull --rebase && git push
+          gh issue create --title "Quran data changed ($(date -u +%F))" --body "$(printf '%s\n\n%s\n\n%s' \
+            "Content Sync returned data that differs from the previous deploy. The checks passed and the site was redeployed; review the changes against the mushaf." \
+            "$CHANGES" \
+            "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")"

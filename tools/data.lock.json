@@ -1,0 +1,54 @@
+{
+  "SURAHS": {
+    "hash": "7b8cdfb8bdcd5121",
+    "count": 114
+  },
+  "JUZ": {
+    "hash": "f00cc5e3530bc4db",
+    "count": 31
+  },
+  "PAGES": {
+    "hash": "d52bedf8edd0c544",
+    "count": 605
+  },
+  "RUB": {
+    "hash": "0000000000000000",
+    "count": 241
+  },
+  "RUKU": {
+    "hash": "42b695947fcf2369",
+    "count": 558
+  },
+  "SAJDAH": {
+    "hash": "9711012c8c7ed5c3",
+    "count": 15
+  },
+  "RUB_LINES": {
+    "hash": "8ca9a91990b8a80b",
+    "count": 240
+  },
+  "FIRST_PAGE_LINES": {
+    "hash": "910f7304c41afacb",
+    "count": 2
+  },
+  "MANZIL": {
+    "hash": "82e49d752ddefa5e",
+    "count": 7
+  },
+  "similar ayat": {
+    "hash": "2cd842b05847dda3",
+    "count": 3981
+  },
+  "similar families": {
+    "hash": "f565cbda3f01b4c0",
+    "count": 4072
+  },
+  "close variants": {
+    "hash": "1c677ab2130a4739",
+    "count": 105
+  },
+  "themes": {
+    "hash": "7a5828d727c75daf",
+    "count": 1054
+  }
+}

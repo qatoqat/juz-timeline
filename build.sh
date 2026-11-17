@@ -1,6 +1,7 @@
 #!/bin/sh
 set -e
 cd "$(dirname "$0")"
+[ -f core/src/data.rs ] || { echo "no Quran data: run tools/rebuild_data.sh first" >&2; exit 1; }
 cargo build --release --target wasm32-unknown-unknown -p quran-timeline -p quran-explore
 v=$(date +%s)
 
