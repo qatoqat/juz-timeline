@@ -49,6 +49,12 @@ pub struct Sajdah {
     pub surah: u8,
     pub ayah: u16,
     pub pos: f32,
+    pub listed: bool,
+}
+
+impl Sajdah {
+    pub const UNLISTED_NOTE: &'static str =
+        "Marked in the Madani mushaf (King Fahd Complex) and counted by the Shafi'i and Hanbali schools; quran.com lists 14 sajdahs without it";
 }
 
 pub struct Ruku {
@@ -136,7 +142,7 @@ impl Mushaf {
             .collect();
         let sajdah = SAJDAH
             .iter()
-            .map(|&(surah, ayah, _)| Sajdah { surah, ayah, pos: page_pos(surah, ayah) })
+            .map(|&(surah, ayah, listed)| Sajdah { surah, ayah, pos: page_pos(surah, ayah), listed })
             .collect();
         let rub = RUB
             .windows(2)

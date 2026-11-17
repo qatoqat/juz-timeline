@@ -21,7 +21,7 @@ const CHIP_WORDS: usize = 4;
 fn dots(data: &Data) -> Vec<Spot> {
     let m = &*MUSHAF;
     let rukus: std::collections::HashSet<AyahKey> = m.ruku.iter().filter(|r| r.ayah != 1).map(|r| (r.surah, r.ayah)).collect();
-    let sajdahs: HashMap<AyahKey, usize> = m.sajdah.iter().enumerate().map(|(i, sj)| ((sj.surah, sj.ayah), i + 1)).collect();
+    let sajdahs: HashMap<AyahKey, (usize, bool)> = m.sajdah.iter().enumerate().map(|(i, sj)| ((sj.surah, sj.ayah), (i + 1, sj.listed))).collect();
     let mut spots = vec![];
     for surah in &m.surahs {
         for ayah in 1..=surah.ayat {
@@ -33,10 +33,10 @@ fn dots(data: &Data) -> Vec<Spot> {
             if ruku.is_some() {
                 tip += " · ruku' starts";
             }
-            if let Some(sj) = sajdah {
-                tip += &format!(" · sajdah {sj}");
+            if let Some((sj, listed)) = sajdah {
+                tip += &format!(" · sajdah {sj}{}", if listed { "" } else { " (not in quran.com's list)" });
             }
-            spots.push(Spot { key, pos: ayah_pos(key), tip, weight: n.min(3) as u8, ruku: ruku.is_some(), sajdah: sajdah.is_some() });
+            spots.push(Spot { key, pos: ayah_pos(key), tip, weight: n.min(3) as u8, ruku: ruku.is_some(), sajdah: sajdah.is_some(), unlisted: sajdah.is_some_and(|s| !s.1) });
         }
     }
     spots

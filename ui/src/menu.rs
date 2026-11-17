@@ -41,6 +41,16 @@ fn mark(t: Target) -> Option<Mark> {
     }
 }
 
+fn note(t: Target) -> Option<&'static str> {
+    let m = &*MUSHAF;
+    let unlisted = |s: u8, a: u16| m.sajdah.iter().any(|sj| (sj.surah, sj.ayah) == (s, a) && !sj.listed);
+    match t {
+        Target::Sajdah(i) if !m.sajdah[i].listed => Some(quran_core::model::Sajdah::UNLISTED_NOTE),
+        Target::Ayah(s, a) if unlisted(s, a) => Some(quran_core::model::Sajdah::UNLISTED_NOTE),
+        _ => None,
+    }
+}
+
 fn describe(t: Target, progress: Progress) -> (String, String, u16) {
     let m = &*MUSHAF;
     match t {
@@ -91,7 +101,7 @@ pub fn ContextMenu() -> Element {
         Target::Bookmark(i) => Some(i),
         _ => progress.bookmarks.read().iter().position(|&p| p == page),
     };
-    let rows = 2 + done.is_some() as usize + if existing.is_some() { 1 } else { 1 + has_bookmarks as usize };
+    let rows = 2 + 3 * note(target).is_some() as usize + done.is_some() as usize + if existing.is_some() { 1 } else { 1 + has_bookmarks as usize };
     let (vw, vh) = web_sys::window()
         .and_then(|w| Some((w.inner_width().ok()?.as_f64()?, w.inner_height().ok()?.as_f64()?)))
         .unwrap_or((1200.0, 800.0));
@@ -110,6 +120,10 @@ pub fn ContextMenu() -> Element {
         }
         div { class: "menu", dir: "ltr", style: "left:{left}px;top:{top}px;width:{MENU_W}px",
             div { class: "menu-title", "{title}" }
+            if let Some(text) = note(target) {
+                div { class: "menu-note", "{text}" }
+                a { class: "menu-link", href: "https://api.quran.com/api/v4/verses/by_key/22:77?fields=sajdah_number", target: "_blank", rel: "noopener", onclick: move |_| close(), "Source: quran.com API ↗" }
+            }
             button {
                 onclick: move |_| {
                     open_url(&url);

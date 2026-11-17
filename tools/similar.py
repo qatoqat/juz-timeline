@@ -1,18 +1,16 @@
 """Build explore/assets/similar.json: shared-phrase families and close variants.
 
-Text: Tanzil (tanzil.net), "simple" for display and "simple-clean" for matching.
+Text: quran.com API (text_imlaei for display, text_imlaei_simple for matching), cached by tools/fetch_quran_com.sh.
 Run: python tools/similar.py
 """
 import collections
 import json
 import pathlib
 import re
-import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent
 CACHE = ROOT / ".cache"
 OUT = ROOT.parent / "explore" / "assets" / "similar.json"
-TANZIL = "https://tanzil.net/pub/download/index.php?quranType={}&outType=txt-2&agree=true"
 
 MIN_WORDS, MAX_WORDS = 3, 30
 MAX_MEMBERS = 12
@@ -22,22 +20,20 @@ VARIANT_RATIO = 0.7
 VARIANT_MIN_WORDS = 4
 
 
-def load(kind):
-    path = CACHE / f"{kind}.txt"
-    if not path.exists():
-        CACHE.mkdir(exist_ok=True)
-        req = urllib.request.Request(TANZIL.format(kind), headers={"User-Agent": "juz-timeline-build"})
-        path.write_bytes(urllib.request.urlopen(req, timeout=60).read())
-    rows = [l.split("|") for l in path.read_text(encoding="utf-8").splitlines() if l.count("|") == 2]
-    return [(int(s), int(a), t.split()) for s, a, t in rows]
+def is_mark(token):
+    return all(0x064B <= ord(c) <= 0x065F or 0x06D6 <= ord(c) <= 0x06ED for c in token)
 
 
-BASMALA_WORDS = 4
-
-
-def drop_basmala(rows):
-    """Tanzil prefixes ayah 1 of every surah but al-Fatiha (where it is ayah 1) and at-Tawbah with the basmala."""
-    return [(s, a, ws[BASMALA_WORDS:] if a == 1 and s not in (1, 9) else ws) for s, a, ws in rows]
+def load():
+    """(surah, ayah, display words, plain words) from the quran.com cache (tools/fetch_quran_com.sh)."""
+    rows = []
+    for s in range(1, 115):
+        for v in json.loads((CACHE / "quran-com" / f"{s}.json").read_text(encoding="utf-8"))["verses"]:
+            shown = [w for w in v["text_imlaei"].split() if not is_mark(w)]
+            plain = v["text_imlaei_simple"].split()
+            assert len(shown) == len(plain), v["verse_key"]
+            rows.append((s, v["verse_number"], shown, plain))
+    return rows
 
 
 def norm(w):
@@ -139,11 +135,10 @@ def variants(words, families):
 
 
 def main():
-    shown = drop_basmala(load("simple"))
-    clean = drop_basmala(load("simple-clean"))
-    words = [[norm(w) for w in ws] for _, _, ws in clean]
-    keys = [[s, a] for s, a, _ in shown]
-    text = [ws for _, _, ws in shown]
+    rows = load()
+    words = [[norm(w) for w in plain] for _, _, _, plain in rows]
+    keys = [[s, a] for s, a, _, _ in rows]
+    text = [shown for _, _, shown, _ in rows]
 
     families = phrase_families(words)
     ordered = sorted(families.items(), key=lambda kv: (-len(kv[1]), -len(kv[0])))

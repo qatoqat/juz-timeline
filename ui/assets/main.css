@@ -139,3 +139,7 @@ h1 > a { direction: ltr; }
 .theme.hot { background-color: color-mix(in srgb, var(--juz-on-a) 50%, var(--juz-a)); color: var(--ink); }
 .theme.on { background-color: var(--juz-on-a); color: var(--on-ink); }
 .theme .tl { overflow: hidden; text-overflow: ellipsis; }
+.sj.unlisted, .spot.sajdah.unlisted { color: var(--edge); }
+.menu-note { padding: 2px 10px 4px; font-size: 12px; line-height: 1.45; color: var(--soft); white-space: normal; }
+.menu-link { padding: 2px 10px 6px; font-size: 12px; color: var(--start); text-decoration: none; }
+.menu-link:hover { text-decoration: underline; }

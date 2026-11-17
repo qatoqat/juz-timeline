@@ -14,6 +14,7 @@ pub struct Spot {
     pub weight: u8,
     pub ruku: bool,
     pub sajdah: bool,
+    pub unlisted: bool,
 }
 
 const SPOT_MAX: f32 = 15.0;
@@ -81,10 +82,11 @@ pub fn OverlayLane(lo: f32, hi: f32, detail: bool) -> Element {
                         b {
                             key: "{s}:{a}",
                             class: format!(
-                                "spot w{}{}{}{}{}{}",
+                                "spot w{}{}{}{}{}{}{}",
                                 spot.weight.min(3),
                                 if spot.sajdah { " sajdah" } else { "" },
                                 if spot.ruku { " ruku" } else { "" },
+                                if spot.unlisted { " unlisted" } else { "" },
                                 if picked == Some(spot.key) { " picked" } else { "" },
                                 if detail && marked.contains(&spot.key) { " marked" } else { "" },
                                 if hot.contains(&spot.key) { " hot" } else { "" },

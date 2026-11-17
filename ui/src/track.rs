@@ -244,7 +244,7 @@ pub fn Track(lo: f32, hi: f32, focus: Signal<Option<Focus>>, selected: Signal<Op
                 for &(i, px) in sajdah.iter() {
                     b {
                         key: "{i}",
-                        class: if sel == Some(Focus::Sajdah(i)) { "sj sel" } else { "sj" },
+                        class: format!("sj{}{}", if sel == Some(Focus::Sajdah(i)) { " sel" } else { "" }, if m.sajdah[i].listed { "" } else { " unlisted" }),
                         style: "right:{px}%",
                         onmouseenter: move |_| enter(Focus::Sajdah(i)),
                         onmouseleave: move |_| leave(),

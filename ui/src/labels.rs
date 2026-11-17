@@ -24,7 +24,8 @@ pub fn juz_tip(i: usize) -> String {
 
 pub fn sajdah_tip(i: usize) -> String {
     let sj = &MUSHAF.sajdah[i];
-    format!("Sajdah {} of 15 · {}:{} · page {}", i + 1, sj.surah, sj.ayah, sj.pos.floor() as u32 + 1)
+    let note = if sj.listed { "" } else { " · not in quran.com's list" };
+    format!("Sajdah {} of {} · {}:{} · page {}{note}", i + 1, MUSHAF.sajdah.len(), sj.surah, sj.ayah, sj.pos.floor() as u32 + 1)
 }
 
 pub fn fmt_len(n: f32) -> String {
