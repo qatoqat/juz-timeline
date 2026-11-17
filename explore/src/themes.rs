@@ -96,8 +96,21 @@ pub fn ThemesPage() -> Element {
             if let Some(list) = parse(&text) {
                 let mut cells_signal = band.cells;
                 cells_signal.set(cells(&list));
+                let wanted = quran_ui::hash::get("theme").and_then(|v| quran_ui::hash::parse_ayah(&v));
+                if let Some(id) = wanted.and_then(|(s, a)| list.iter().position(|t| t.surah == s && t.from <= a && a <= t.to)) {
+                    let mut chosen = band.chosen;
+                    chosen.set(Some(id));
+                }
                 themes.set(Some(Rc::new(list)));
             }
+        }
+    });
+
+    use_effect(move || {
+        let chosen = (band.chosen)();
+        if let Some(list) = themes() {
+            let value = chosen.and_then(|id| list.get(id)).map(|t| format!("{}:{}", t.surah, t.from));
+            quran_ui::hash::set(&[("theme", value)]);
         }
     });
 

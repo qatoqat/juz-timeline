@@ -1,5 +1,6 @@
 mod labels;
 pub mod band;
+pub mod hash;
 pub mod menu;
 pub mod overlay;
 mod progress;
@@ -28,7 +29,8 @@ pub enum Focus {
 pub fn Page(title: Element, ruku: bool, #[props(default = VNode::empty())] extra: Element) -> Element {
     let mut layout = use_signal(|| Layout::Three);
     let focus = use_signal(|| None::<Focus>);
-    let selected = use_signal(|| None::<Focus>);
+    let selected = use_signal(hash::read_focus);
+    use_effect(move || hash::write_focus(selected()));
     use_context_provider(|| overlay::Selection { focus, selected });
     let progress = progress::use_progress_provider();
     menu::use_menu_provider();

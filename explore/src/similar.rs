@@ -63,9 +63,10 @@ pub fn SimilarAyah() -> Element {
     let overlay = use_context_provider(|| Overlay {
         dots: Signal::new(vec![]),
         marks: Signal::new(vec![]),
-        picked: Signal::new(None),
+        picked: Signal::new(quran_ui::hash::get("ayah").and_then(|v| quran_ui::hash::parse_ayah(&v))),
         hot: Signal::new(vec![]),
     });
+    use_effect(move || quran_ui::hash::set(&[("ayah", (overlay.picked)().map(|(s, a)| format!("{s}:{a}")))]));
     use_context_provider(|| Drill(Signal::new(load_drill())));
     let band = use_context_provider(|| Band { cells: Signal::new(vec![]), hovered: Signal::new(None), chosen: Signal::new(None) });
     let mut root = use_signal(|| None::<usize>);
