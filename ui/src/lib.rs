@@ -98,9 +98,10 @@ fn Info(focus: Option<Focus>, selected: bool) -> Element {
             let s = &m.surahs[i];
             let (j1, j2) = (juz_of(s.start), juz_of(s.end - 1e-3));
             let juz = if j1 == j2 { format!("Juz {j1}") } else { format!("Juz {j1}–{j2}") };
+            let ruku = m.ruku.iter().filter(|r| r.surah as usize == s.num).count();
             format!(
-                "{} · {} · {} · {} ayat · {} · pages {}–{} · {}",
-                s.num, isolate(s.name), s.tname, s.ayat,
+                "{} · {} · {} · {} ayat · {} ruku' · {} · pages {}–{} · {}",
+                s.num, isolate(s.name), s.tname, s.ayat, ruku,
                 if s.makki { "Makki" } else { "Madani" },
                 s.start.floor() as u32 + 1, s.end.ceil() as u32, juz
             )
@@ -108,9 +109,10 @@ fn Info(focus: Option<Focus>, selected: bool) -> Element {
         Some(Focus::Juz(i)) => {
             let j = &m.juz[i];
             let s = &m.surahs[j.from.0 as usize - 1];
+            let ruku = m.ruku.iter().filter(|r| r.pos >= j.start - 1e-3 && r.pos < j.end - 1e-3).count();
             format!(
-                "Juz {} · starts {} {}:{} · pages {}–{}",
-                j.num, isolate(s.name), j.from.0, j.from.1, j.start.floor() as u32 + 1, j.end.ceil() as u32
+                "Juz {} · starts {} {}:{} · {} ruku' begin here · pages {}–{}",
+                j.num, isolate(s.name), j.from.0, j.from.1, ruku, j.start.floor() as u32 + 1, j.end.ceil() as u32
             )
         }
         Some(Focus::Sajdah(i)) => {

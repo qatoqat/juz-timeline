@@ -17,27 +17,18 @@ const CHIP_WORDS: usize = 4;
 
 fn dots(data: &Data) -> Vec<Spot> {
     let m = &*MUSHAF;
-    let mut within = 0;
-    let rukus: HashMap<AyahKey, (usize, usize)> = m
-        .ruku
-        .iter()
-        .map(|r| {
-            within = if r.ayah == 1 { 1 } else { within + 1 };
-            ((r.surah, r.ayah), (within, r.index + 1))
-        })
-        .filter(|(k, _)| k.1 != 1)
-        .collect();
+    let rukus: std::collections::HashSet<AyahKey> = m.ruku.iter().filter(|r| r.ayah != 1).map(|r| (r.surah, r.ayah)).collect();
     let sajdahs: HashMap<AyahKey, usize> = m.sajdah.iter().enumerate().map(|(i, sj)| ((sj.surah, sj.ayah), i + 1)).collect();
     let mut spots = vec![];
     for surah in &m.surahs {
         for ayah in 1..=surah.ayat {
             let key = (surah.num as u8, ayah);
             let n = data.slot.get(&key).map_or(0, |&a| data.family_of[a].len() + data.variant_of[a].len());
-            let ruku = rukus.get(&key).copied();
+            let ruku = rukus.contains(&key).then_some(());
             let sajdah = sajdahs.get(&key).copied();
             let mut tip = format!("{}:{} · {}", key.0, key.1, if n == 0 { "no similar ayat".to_string() } else { plural(n, "similar group") });
-            if let Some((n, all)) = ruku {
-                tip += &format!(" · ruku' {n} of this surah starts ({all} overall)");
+            if ruku.is_some() {
+                tip += " · ruku' starts";
             }
             if let Some(sj) = sajdah {
                 tip += &format!(" · sajdah {sj}");

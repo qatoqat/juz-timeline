@@ -139,11 +139,13 @@ pub fn Track(lo: f32, hi: f32, focus: Signal<Option<Focus>>, selected: Signal<Op
         .map(|p| line_style(x(p)))
         .collect();
 
+    let has_overlay = try_use_context::<crate::overlay::Overlay>().is_some();
+    let ayah_row = detail && has_overlay;
     let sajdah: Vec<(usize, f32)> = m
         .sajdah
         .iter()
         .enumerate()
-        .filter(|(_, s)| inside(s.pos))
+        .filter(|(_, s)| !ayah_row && inside(s.pos))
         .map(|(i, s)| (i, x(s.pos)))
         .collect();
     let manzil: Vec<(usize, char, f32)> = MANZIL

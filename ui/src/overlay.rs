@@ -71,19 +71,15 @@ pub fn OverlayLane(lo: f32, hi: f32, detail: bool, width: f32) -> Element {
     let source: Vec<Spot> = if detail { overlay.dots.read().clone() } else { overlay.marks.read().clone() };
     let mut spots: Vec<(Spot, f32)> = source.into_iter().filter(|s| inside(s.pos)).map(|s| { let px = x(s.pos); (s, px) }).collect();
     spots.sort_by(|a, b| a.1.total_cmp(&b.1));
-    let gaps: Vec<f32> = (0..spots.len())
-        .map(|i| {
-            let prev = if i > 0 { spots[i].1 - spots[i - 1].1 } else { f32::MAX };
-            let next = if i + 1 < spots.len() { spots[i + 1].1 - spots[i].1 } else { f32::MAX };
-            prev.min(next) * width / 100.0
-        })
-        .collect();
+    let mut gaps: Vec<f32> = spots.windows(2).map(|w| (w[1].1 - w[0].1) * width / 100.0).collect();
+    gaps.sort_by(f32::total_cmp);
+    let tight = gaps.get(gaps.len() / 5).copied().unwrap_or(SPOT_MAX * 2.0);
+    let size = if detail { (tight * 0.9).clamp(SPOT_MIN, SPOT_MAX) } else { 8.0 };
 
     rsx! {
         div { class: if detail { "lane dots" } else { "lane marks" },
-            for ((spot, px), gap) in spots.into_iter().zip(gaps) {
+            for (spot, px) in spots {
                 {
-                    let size = if detail { (gap * 0.9).clamp(SPOT_MIN, SPOT_MAX) } else { 8.0 };
                     let (s, a) = spot.key;
                     rsx! {
                         b {

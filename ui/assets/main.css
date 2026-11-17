@@ -120,7 +120,7 @@ h1 > a { direction: ltr; }
 .spot.w2 { background: color-mix(in srgb, var(--sj) 78%, transparent); }
 .spot.w3 { background: var(--sj); }
 .spot.w0 .rk-in { color: var(--sj); }
-.spot .rk-in { font-style: normal; font-weight: 500; pointer-events: none; }
+.spot .rk-in { font-style: normal; font-weight: 500; pointer-events: none; display: block; line-height: 1; transform: translateY(-0.3em); }
 .spot.sajdah { border: 0; background: transparent; border-radius: 0; color: var(--sj); }
 .spot.sajdah svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .spot.sajdah .rk-in { position: relative; top: 15%; color: var(--sj); font-size: 0.8em; }
