@@ -87,6 +87,13 @@ pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(de
                     button { class: if layout() == Layout::Three { "on" }, onclick: move |_| layout.set(Layout::Three), "3 lines × 10 juz" }
                 }
             }
+            if three && collapsed() {
+                div { class: "lines-nav", dir: "ltr",
+                    button { class: if line() == 2 { "gone" }, disabled: line() == 2, "data-tip": "Next 10 juz", onclick: move |_| line += 1, "‹" }
+                    span { "{LINES[line()].1}–{LINES[line()].0 + 1}" }
+                    button { class: if line() == 0 { "gone" }, disabled: line() == 0, "data-tip": "Previous 10 juz", onclick: move |_| line -= 1, "›" }
+                }
+            }
             for &(a, b) in rows {
                 Track {
                     key: "{a}-{b}",
