@@ -18,7 +18,7 @@ impl Mark {
         match f {
             Focus::Surah(i) => Some(Mark::Surah(i)),
             Focus::Juz(i) => Some(Mark::Juz(i)),
-            Focus::Sajdah(_) => None,
+            Focus::Sajdah(_) | Focus::Hizb(_) => None,
         }
     }
 }

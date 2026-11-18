@@ -26,6 +26,7 @@ pub enum Focus {
     Surah(usize),
     Juz(usize),
     Sajdah(usize),
+    Hizb(usize),
 }
 
 #[component]
@@ -122,6 +123,7 @@ fn Info(focus: Option<Focus>, selected: bool) -> Element {
                 j.num, isolate(s.name), j.from.0, j.from.1, ruku, j.start.floor() as u32 + 1, j.end.ceil() as u32
             )
         }
+        Some(Focus::Hizb(h)) => labels::hizb_tip(h),
         Some(Focus::Sajdah(i)) => {
             let sj = &m.sajdah[i];
             let s = &m.surahs[sj.surah as usize - 1];

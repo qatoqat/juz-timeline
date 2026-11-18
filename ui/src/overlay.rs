@@ -51,6 +51,7 @@ pub fn range_of(focus: Focus) -> (f32, f32) {
     match focus {
         Focus::Surah(i) => (m.surahs[i].start, m.surahs[i].end),
         Focus::Juz(i) => (m.juz[i].start, m.juz[i].end),
+        Focus::Hizb(h) => (m.rub[4 * h].pos, m.rub[4 * h + 3].end),
         Focus::Sajdah(i) => {
             let s = &m.surahs[m.sajdah[i].surah as usize - 1];
             (s.start, s.end)

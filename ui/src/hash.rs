@@ -48,15 +48,17 @@ pub fn read_focus() -> Option<Focus> {
         .map(|n| Focus::Surah(n - 1))
         .or_else(|| number("juz").filter(|&n| n <= 30).map(|n| Focus::Juz(n - 1)))
         .or_else(|| number("sajdah").filter(|&n| n <= crate::MUSHAF.sajdah.len()).map(|n| Focus::Sajdah(n - 1)))
+        .or_else(|| number("hizb").filter(|&n| n <= crate::MUSHAF.rub.len() / 4).map(|n| Focus::Hizb(n - 1)))
 }
 
 pub fn write_focus(focus: Option<Focus>) {
-    let (surah, juz, sajdah) = match focus {
-        Some(Focus::Surah(i)) => (Some(i + 1), None, None),
-        Some(Focus::Juz(i)) => (None, Some(i + 1), None),
-        Some(Focus::Sajdah(i)) => (None, None, Some(i + 1)),
-        None => (None, None, None),
+    let (surah, juz, sajdah, hizb) = match focus {
+        Some(Focus::Surah(i)) => (Some(i + 1), None, None, None),
+        Some(Focus::Juz(i)) => (None, Some(i + 1), None, None),
+        Some(Focus::Sajdah(i)) => (None, None, Some(i + 1), None),
+        Some(Focus::Hizb(h)) => (None, None, None, Some(h + 1)),
+        None => (None, None, None, None),
     };
     let text = |n: Option<usize>| n.map(|n| n.to_string());
-    set(&[("surah", text(surah)), ("juz", text(juz)), ("sajdah", text(sajdah))]);
+    set(&[("surah", text(surah)), ("juz", text(juz)), ("sajdah", text(sajdah)), ("hizb", text(hizb))]);
 }

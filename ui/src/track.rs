@@ -32,6 +32,7 @@ pub fn span_of(f: Focus) -> (f32, f32) {
         Focus::Surah(i) => (m.surahs[i].start, m.surahs[i].end),
         Focus::Juz(i) => (m.juz[i].start, m.juz[i].end),
         Focus::Sajdah(i) => (m.sajdah[i].pos, m.sajdah[i].pos + 2.0 * EPS),
+        Focus::Hizb(h) => (m.rub[4 * h].pos, m.rub[4 * h + 3].end),
     }
 }
 
@@ -138,6 +139,12 @@ pub fn Track(
         .map(|(h, s, e)| (h, x(s.max(lo)), x(e.min(hi)) - x(s.max(lo))))
         .collect();
     let narrowest = hizbs.iter().map(|c| c.2).fold(f32::INFINITY, f32::min) * w / 100.0;
+    let lit_focus = selected().or(focus());
+    let hizb_lit = move |h: usize| match lit_focus {
+        Some(Focus::Hizb(k)) => if k == h { Lit::Full } else { Lit::Off },
+        Some(f) if overlaps((m.rub[4 * h].pos, m.rub[4 * h + 3].end), span_of(f)) => Lit::Half,
+        _ => Lit::Off,
+    };
     let hizb_every = if narrowest >= HIZB_LABEL_PX { 1 } else if 2.0 * narrowest >= HIZB_LABEL_PX { 2 } else { 0 };
 
     let fixed = [m.juz[0].start, m.juz[9].end, m.juz[19].end, m.juz[29].end].map(|p| (p, Line::Edge));
@@ -336,9 +343,12 @@ pub fn Track(
                     for (h, a, hw) in hizbs {
                         div {
                             key: "{h}",
-                            class: if h % 2 == 1 { "hizbc even" } else { "hizbc" },
+                            class: cell_class("hizbc", h % 2 == 1, hizb_lit(h), sel == Some(Focus::Hizb(h))),
                             style: "right:{a}%;width:{hw}%",
                             "data-tip": "{hizb_tip(h)}",
+                            onmouseenter: move |_| enter(Focus::Hizb(h)),
+                            onmouseleave: move |_| leave(),
+                            onclick: move |_| click(Focus::Hizb(h)),
                             if hizb_every > 0 && h % hizb_every == 0 { span { class: "lbl", "{h + 1}" } }
                         }
                     }
