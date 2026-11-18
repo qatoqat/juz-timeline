@@ -117,7 +117,6 @@
 .picked-bar .navbar { margin-bottom: 0; }
 .ruku-list { display: flex; flex-direction: column; gap: 10px; max-height: min(55vh, 560px); overflow-y: auto; padding-right: 6px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; overscroll-behavior: contain; }
 .ruku-block { border-left: 2px solid var(--edge); padding-left: 12px; }
-.ruku-block.on { border-left-color: var(--bm); }
 .ruku-title { margin: 0 0 4px; font-size: 12px; color: var(--soft); }
 .ruku-title .ar { unicode-bidi: isolate; }
 .ruku-title .count { color: var(--muted); }

@@ -1,7 +1,6 @@
 use crate::card::{Card, Quiz};
 use crate::data::Data;
-use crate::overview::{ruku_cells, RukuList};
-use quran_ui::band::Band;
+use crate::overview::RukuList;
 use crate::nav::{Nav, NavBar};
 use crate::spine::{load_drill, plural, Spine, Variants};
 use crate::tree::{Drill, Shared, Tree};
@@ -77,7 +76,6 @@ pub fn SimilarAyah() -> Element {
     });
     use_effect(move || quran_ui::hash::set(&[("ayah", (overlay.picked)().map(|(s, a)| format!("{s}:{a}")))]));
     use_context_provider(|| Drill(Signal::new(load_drill())));
-    let band = use_context_provider(|| Band { cells: Signal::new(vec![]), hovered: Signal::new(None), chosen: Signal::new(None) });
     let mut root = use_signal(|| None::<usize>);
     let mut pending = use_signal(|| None::<usize>);
     let nav = use_context_provider(|| Nav::new(root, pending));
@@ -96,8 +94,6 @@ pub fn SimilarAyah() -> Element {
                 quran_ui::hash::set(&[("phrase", None)]);
                 let mut dots_signal = overlay.dots;
                 dots_signal.set(dots(&d));
-                let mut cells = band.cells;
-                cells.set(ruku_cells(&d));
                 data.set(Some(Rc::new(d)));
             }
         }
