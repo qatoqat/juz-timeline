@@ -22,7 +22,12 @@ pub fn Card(data: Shared, family: usize, picked: usize) -> Element {
     let menu = use_context::<Signal<Option<Menu>>>();
     let d = data.0.clone();
     let rows: Vec<Row> = d.rows(family);
-    let phrase = d.phrase(family);
+    let phrase = if d.families[family].members.iter().any(|m| m.0 == picked) {
+        let (start, end) = d.span_in(family, picked);
+        d.words(picked)[start..end].join(" ")
+    } else {
+        d.phrase(family)
+    };
 
     rsx! {
         div { class: "card",

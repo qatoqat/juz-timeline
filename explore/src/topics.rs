@@ -2,6 +2,7 @@ use crate::concept::{ConceptMap, Current};
 use crate::ontology::{parse_text, Ontology, SharedOntology};
 use crate::spine::plural;
 use crate::spread::{Occurrences, Spread, Texts};
+use crate::trail::Trail;
 use dioxus::prelude::*;
 use quran_ui::overlay::{ayah_pos, Overlay, Spot};
 use quran_ui::MUSHAF;
@@ -38,45 +39,6 @@ fn dots(o: &Ontology) -> Vec<Spot> {
         .collect()
 }
 
-#[derive(Clone, Copy)]
-struct History {
-    list: Signal<Vec<usize>>,
-    cursor: Signal<usize>,
-    restoring: Signal<bool>,
-}
-
-impl History {
-    fn record(mut self, i: usize) {
-        if *self.restoring.peek() {
-            self.restoring.set(false);
-            return;
-        }
-        let mut list = self.list.peek().clone();
-        let cursor = *self.cursor.peek();
-        if list.get(cursor) == Some(&i) {
-            return;
-        }
-        list.truncate(if list.is_empty() { 0 } else { cursor + 1 });
-        list.push(i);
-        self.cursor.set(list.len() - 1);
-        self.list.set(list);
-    }
-
-    fn can(self, delta: i32) -> bool {
-        let target = (self.cursor)() as i32 + delta;
-        target >= 0 && (target as usize) < self.list.read().len()
-    }
-
-    fn go(mut self, delta: i32, mut topic: Signal<Option<usize>>) {
-        if self.can(delta) {
-            let target = (*self.cursor.peek() as i32 + delta) as usize;
-            self.cursor.set(target);
-            self.restoring.set(true);
-            topic.set(Some(self.list.peek()[target]));
-        }
-    }
-}
-
 #[component]
 pub fn TopicsPage() -> Element {
     let mut onto = use_signal(|| None::<Rc<Ontology>>);
@@ -88,7 +50,7 @@ pub fn TopicsPage() -> Element {
         hot: Signal::new(vec![]),
     });
     let current = use_context_provider(|| Current { topic: Signal::new(None), rollup: Signal::new(true) });
-    let history = use_context_provider(|| History { list: Signal::new(vec![]), cursor: Signal::new(0), restoring: Signal::new(false) });
+    let history = use_context_provider(Trail::<usize>::new);
     use_future(move || async move {
         let mut fetch = document::eval(FETCH);
         if let Ok(text) = fetch.recv::<String>().await {
@@ -196,7 +158,7 @@ fn Browse(onto: SharedOntology) -> Element {
 fn Panel(onto: Option<SharedOntology>, texts: Texts) -> Element {
     let overlay = use_context::<Overlay>();
     let current = use_context::<Current>();
-    let history = use_context::<History>();
+    let history = use_context::<Trail<usize>>();
     let mut query = use_signal(String::new);
     let by_surah = use_signal(|| false);
     let Some(shared) = onto else { return rsx! { p { class: "groups-note", "Loading concepts…" } } };
@@ -235,8 +197,8 @@ fn Panel(onto: Option<SharedOntology>, texts: Texts) -> Element {
                     div { key: "{i}", class: "topic-view",
                         div { class: "picked-bar",
                             div { class: "navbar",
-                                button { class: "nav", disabled: !history.can(-1), onclick: move |_| history.go(-1, topic_signal), "‹ Back" }
-                                button { class: "nav", disabled: !history.can(1), onclick: move |_| history.go(1, topic_signal), "Forward ›" }
+                                button { class: "nav", disabled: !history.can(-1), onclick: move |_| if let Some(i) = history.go(-1) { topic_signal.set(Some(i)) }, "‹ Back" }
+                                button { class: "nav", disabled: !history.can(1), onclick: move |_| if let Some(i) = history.go(1) { topic_signal.set(Some(i)) }, "Forward ›" }
                             }
                             button { class: "nav", onclick: move |_| topic_signal.set(None), "All concepts" }
                         }

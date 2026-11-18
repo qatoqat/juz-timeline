@@ -35,8 +35,12 @@ pub struct Selection {
 }
 
 impl Selection {
+    /// Picks the ayah, selecting its surah unless the current selection already shows it.
     pub fn show(mut self, key: AyahKey, overlay: Overlay) {
-        self.selected.set(Some(Focus::Surah(key.0 as usize - 1)));
+        let pos = ayah_pos(key);
+        if !(*self.selected.peek()).map(range_of).is_some_and(|(lo, hi)| pos >= lo && pos < hi) {
+            self.selected.set(Some(Focus::Surah(key.0 as usize - 1)));
+        }
         let mut picked = overlay.picked;
         picked.set(Some(key));
     }

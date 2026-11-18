@@ -46,6 +46,7 @@ pub fn ruku_cells(data: &Data) -> Vec<Cell> {
                 tip: format!("Ruku' {number} · from {}:{} · {}", k.surah, k.ayah, plural(n, "similar phrase")),
                 heavy: true,
                 level: LEVELS.iter().filter(|&&l| n >= l).count() as u8,
+                mark: false,
             }
         })
         .collect()

@@ -34,6 +34,9 @@ def components():
         out[name] = {"hash": digest(topics[key]), "count": len(topics[key])}
     text = json.loads((REPO / "explore" / "assets" / "topic-ayat.json").read_text(encoding="utf-8"))
     out["concept ayah text"] = {"hash": digest(text), "count": len(text["k"])}
+    rel = json.loads((REPO / "explore" / "assets" / "relations.json").read_text(encoding="utf-8"))
+    for key, name in [("o", "theme openings"), ("t", "theme twins"), ("r", "refrains"), ("l", "theme links"), ("x", "relation ayah text")]:
+        out[name] = {"hash": digest(rel[key]), "count": len(rel[key])}
     return out
 
 

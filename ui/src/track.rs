@@ -334,6 +334,7 @@ pub fn Track(lo: f32, hi: f32, focus: Signal<Option<Focus>>, selected: Signal<Op
                 }
                 crate::band::BandLane { lo, hi, width: w }
                 OverlayLane { lo, hi, detail: true }
+                crate::arcs::ArcLane { lo, hi }
                 div { class: "lane pages",
                     span { class: "first", "{first_page}" }
                     for (p, px, show) in page_marks {

@@ -1,5 +1,6 @@
 mod fresh;
 mod labels;
+pub mod arcs;
 pub mod band;
 pub mod hash;
 pub mod menu;

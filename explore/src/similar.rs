@@ -57,6 +57,15 @@ fn related(data: &Data, a: usize, root: Option<usize>) -> Vec<AyahKey> {
     keys
 }
 
+/// `#phrase=start:len` (from the Ayah themes page) names the family to open on the picked ayah.
+fn phrase_from_hash(d: &Data, picked: Option<AyahKey>) -> Option<usize> {
+    let text = quran_ui::hash::get("phrase")?;
+    let (start, len) = text.split_once(':')?;
+    let (start, len): (usize, usize) = (start.parse().ok()?, len.parse().ok()?);
+    let a = *d.slot.get(&picked?)?;
+    d.family_of[a].iter().copied().find(|&f| d.families[f].len == len && d.start_in(f, a) == start)
+}
+
 #[component]
 pub fn SimilarAyah() -> Element {
     let mut data = use_signal(|| None::<Rc<Data>>);
@@ -81,6 +90,10 @@ pub fn SimilarAyah() -> Element {
         let mut fetch = document::eval(FETCH);
         if let Ok(text) = fetch.recv::<String>().await {
             if let Some(d) = Data::parse(&text) {
+                if let Some(f) = phrase_from_hash(&d, *overlay.picked.peek()) {
+                    pending.set(Some(f));
+                }
+                quran_ui::hash::set(&[("phrase", None)]);
                 let mut dots_signal = overlay.dots;
                 dots_signal.set(dots(&d));
                 let mut cells = band.cells;

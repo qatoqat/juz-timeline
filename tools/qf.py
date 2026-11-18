@@ -62,3 +62,49 @@ class Quran:
 @functools.cache
 def quran():
     return Quran()
+
+
+FATHA, DAMMA, KASRA, SUKUN, SHADDA = "َ", "ُ", "ِ", "ْ", "ّ"
+TANWEEN = "ًٌٍ"
+VOWEL_MARKS = set(FATHA + DAMMA + KASRA + SUKUN + SHADDA + TANWEEN + "ٰٕٓٔ")
+
+
+def _units(word):
+    """[(letter, sorted marks)] without waqf signs, tatweel and spaces; alif wasla read as alif."""
+    out = []
+    for c in word:
+        if 0x06D6 <= ord(c) <= 0x06ED or c in "ـ ۞" or c.isspace():
+            continue
+        if c in VOWEL_MARKS:
+            if out:
+                out[-1][1].append(c)
+        else:
+            out.append(["ا" if c == "ٱ" else c, []])
+    return [(letter, "".join(sorted(marks))) for letter, marks in out]
+
+
+def vkey(word, min_left=3):
+    """Vowel-aware word key: drops the vowelled proclitics (wa/fa, bi/li/ka, al-) and the case ending, keeps every other vowel.
+    Joins وَقَطَّعْنَ ~ قَطَّعْنَ and النِّسْوَةِ ~ نِسْوَةٌ, never بُكْمٌ ~ بِكُمْ."""
+    u = _units(word)
+    if len(u) > min_left and u[0][0] in "وف" and u[0][1] == FATHA:
+        u = u[1:]
+    if len(u) > min_left and ((u[0][0] in "بل" and u[0][1] == KASRA) or (u[0][0] == "ك" and u[0][1] == FATHA)):
+        rest = u[1:]
+        if rest[0][0] == "ل" and rest[0][1] in ("", SUKUN) and len(rest) > min_left:
+            nxt = rest[1]
+            if rest[0][1] == SUKUN or SHADDA in nxt[1]:
+                rest = [(nxt[0], nxt[1].replace(SHADDA, ""))] + rest[2:]
+        u = rest
+    if len(u) > min_left + 1 and u[0] == ("ا", "") and u[1][0] == "ل" and u[1][1] in ("", SUKUN):
+        nxt = u[2]
+        if u[1][1] == SUKUN or SHADDA in nxt[1]:
+            u = [(nxt[0], nxt[1].replace(SHADDA, ""))] + u[3:]
+    if len(u) >= 2 and u[-1] == ("ا", "") and any(t in u[-2][1] for t in TANWEEN):
+        u = u[:-1]
+    if u and u[-1][0] == "ا" and any(t in u[-1][1] for t in TANWEEN):
+        u = u[:-1]
+    if u:
+        letter, marks = u[-1]
+        u = u[:-1] + [(letter, "".join(c for c in marks if c not in TANWEEN + FATHA + DAMMA + KASRA))]
+    return "".join(letter + marks for letter, marks in u)

@@ -70,5 +70,25 @@
   "concept ayah text": {
     "hash": "3be67ec46c4c4a19",
     "count": 2831
+  },
+  "theme openings": {
+    "hash": "71b65807cddb5914",
+    "count": 1054
+  },
+  "theme twins": {
+    "hash": "18ee581f7878022a",
+    "count": 216
+  },
+  "refrains": {
+    "hash": "e62fb8c7f6bd81f7",
+    "count": 29
+  },
+  "theme links": {
+    "hash": "59434669457c64af",
+    "count": 2752
+  },
+  "relation ayah text": {
+    "hash": "e32edccce32b2a53",
+    "count": 760
   }
 }

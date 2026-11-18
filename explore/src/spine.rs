@@ -18,7 +18,7 @@ pub fn load_drill() -> bool {
     storage().and_then(|s| s.get_item(DRILL_KEY).ok()?).as_deref() == Some("1")
 }
 
-fn save_drill(on: bool) {
+pub fn save_drill(on: bool) {
     if let Some(s) = storage() {
         let _ = s.set_item(DRILL_KEY, if on { "1" } else { "0" });
     }

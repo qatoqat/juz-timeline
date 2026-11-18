@@ -9,4 +9,5 @@ python gen_data.py > ../core/src/data.rs.tmp && mv ../core/src/data.rs.tmp ../co
 python similar.py
 python themes.py
 python topics.py
+python relations.py
 python check_data.py

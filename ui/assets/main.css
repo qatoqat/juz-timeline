@@ -149,3 +149,24 @@ h1 > a { direction: ltr; }
 .theme.l3 { background-color: color-mix(in srgb, var(--sj) 56%, var(--juz-a)); color: var(--ink); }
 .theme.l4 { background-color: color-mix(in srgb, var(--sj) 78%, var(--juz-a)); color: var(--bg); }
 .theme.l1.on, .theme.l2.on, .theme.l3.on, .theme.l4.on { background-color: var(--juz-on-a); color: var(--on-ink); }
+.theme .slip { position: absolute; top: 3px; left: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--bm); pointer-events: none; }
+.arcs { margin-top: 2px; }
+.arcs svg { display: block; width: 100%; height: 84px; overflow: visible; }
+.arc path { fill: none; vector-effect: non-scaling-stroke; }
+.arc .line { stroke: var(--sj); stroke-width: 1.3; opacity: 0.7; pointer-events: none; }
+.arc.word .line { stroke-dasharray: 4 3; opacity: 0.55; }
+.arc.twin .line { stroke: var(--bm); stroke-width: 1.7; opacity: 0.7; }
+.arc .hit { stroke: transparent; stroke-width: 9; cursor: pointer; }
+.arc.dim .line { opacity: 0.12; }
+.arc.on .line { opacity: 1; stroke-width: 2.2; }
+.arc.twin.on .line { stroke-width: 2.6; opacity: 1; }
+.arc:hover .line { opacity: 1; }
+.arcs .tick { stroke: var(--bm); stroke-width: 2; vector-effect: non-scaling-stroke; cursor: help; }
+.arc-caption { margin: 0; font-size: 11px; color: var(--muted); direction: ltr; text-align: right; }
+.arc-caption .phone { display: none; }
+@media (max-width: 640px) {
+  .arcs svg { height: 56px; }
+  .arc.extra { display: none; }
+  .arc-caption .phone { display: inline; }
+  .arc-caption .wide { display: none; }
+}
