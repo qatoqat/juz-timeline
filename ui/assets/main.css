@@ -42,8 +42,8 @@ h1 .sub { font-size: 14px; color: var(--muted); margin-inline-start: 12px; }
   display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--ink); }
 .surah.even { background-color: var(--sur-b); }
 .line { top: 0; bottom: 0; width: 0; border-left: 2px solid var(--edge); pointer-events: none; z-index: 1; }
-.line.mid { border-left-color: var(--juz-on-a); }
-.line.manzil { border-left-color: var(--sur-on-a); }
+.line.mid { border-left-color: color-mix(in srgb, var(--juz-on-a) 50%, transparent); }
+.line.manzil { border-left-color: color-mix(in srgb, var(--sur-on-a) 50%, transparent); }
 .line.dotted { border-left-style: dotted; }
 .juz { top: 0; height: 100%; background-color: var(--juz-a); display: flex; align-items: center; justify-content: center;
   font-size: 12px; color: var(--soft); border-inline-start: 1px solid var(--bg); }
