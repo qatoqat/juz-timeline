@@ -1,7 +1,5 @@
 use crate::relations::{key_of, Relations, Seg, STORY};
-use crate::slips::twin_key;
 use crate::themes::{open, open_twin, Theme, Themes, View};
-use crate::tree::Drill;
 use dioxus::prelude::*;
 use quran_ui::band::Band;
 use quran_ui::overlay::{ayah_pos, range_of, Selection};
@@ -55,20 +53,19 @@ pub fn Revise(themes: Themes) -> Element {
         return rsx! { p { class: "themes-note", "Select a surah or juz: its look-alike passages, retold stories and refrains will be listed here to revise together." } };
     };
     let data = (view.data)();
-    let slips = (view.slips)();
     let list = themes.0.clone();
     let inside = |g: u16| { let p = ayah_pos(key_of(g)); p >= lo && p < hi };
-    let mut rows: Vec<(bool, usize, usize, usize)> = rel
+    let mut rows: Vec<(usize, usize, usize)> = rel
         .twins
         .iter()
         .enumerate()
         .filter_map(|(k, tw)| {
             let side = (0..2).find(|&s| inside(tw.sides[s].0))?;
             let matched = tw.flags[side].iter().filter(|&&f| f != b'*').count();
-            Some((slips.has(&twin_key(tw)), matched, k, side))
+            Some((matched, k, side))
         })
         .collect();
-    rows.sort_by(|a, b| b.0.cmp(&a.0).then(b.1.cmp(&a.1)).then(a.2.cmp(&b.2)));
+    rows.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
     let stories: Vec<(usize, Vec<usize>)> = (0..list.len())
         .filter(|&t| list[t].start >= lo && list[t].start < hi)
         .filter_map(|t| {
@@ -82,7 +79,7 @@ pub fn Revise(themes: Themes) -> Element {
         div { class: "revise",
             p { class: "tp-sec-head", span { class: "ar", "مقاطع متشابهة" } " · look-alike passages · {rows.len()}" }
             if rows.is_empty() { p { class: "themes-note", "No look-alike passages start in this range." } }
-            for (slipped, _, k, side) in rows {
+            for (_, k, side) in rows {
                 {
                     let tw = &rel.twins[k];
                     let (this, other) = (tw.sides[side], tw.sides[1 - side]);
@@ -91,7 +88,7 @@ pub fn Revise(themes: Themes) -> Element {
                     rsx! {
                         div {
                             key: "{k}",
-                            class: if slipped { "rv-row slipped" } else { "rv-row" },
+                            class: "rv-row",
                             dir: "rtl",
                             onclick: move |_| open_twin(view, band, selection, &go_list, &go_rel, k, side),
                             span { class: "rv-ref", "{rel.range_label(this.0, this.1)}" }
@@ -167,8 +164,6 @@ pub fn RefrainChips(refrains: Vec<usize>) -> Element {
 #[component]
 fn Refrain(r: usize) -> Element {
     let view = use_context::<View>();
-    let Drill(drill) = use_context::<Drill>();
-    let mut shown = use_signal(Vec::<usize>::new);
     let Some(rel) = (view.rel)() else { return rsx! {} };
     let data = (view.data)();
     let refrain = &rel.refrains[r];
@@ -178,21 +173,20 @@ fn Refrain(r: usize) -> Element {
     let first = reading(&own(refrain.at[0].0, refrain.at[0].1));
     rsx! {
         div { class: "refrain",
-            p { class: "hint", dir: "ltr", span { class: "ar", "ما بعدها؟" } " What follows each time?" }
+            p { class: "hint", dir: "ltr", span { class: "ar", "ما بعدها" } " · what follows each time" }
             for (n, &(g, st)) in refrain.at.iter().enumerate() {
                 {
                     let (s, a) = key_of(g);
                     let words = rel.words(g, data.as_deref()).unwrap_or_default();
                     let rest: Vec<String> = words.iter().skip(st + refrain.len).take(FOLLOW_WORDS).cloned().collect();
                     let follow = if rest.is_empty() { rel.next_words(g, data.as_deref()).map(|w| format!("۝ {}", w.join(" "))).unwrap_or_default() } else { rest.join(" ") };
-                    let hidden = drill() && !shown.read().contains(&n);
                     let wording = own(g, st);
                     let differs = reading(&wording) != first;
                     rsx! {
-                        div { key: "{n}", class: "rf-row", dir: "rtl", onclick: move |_| shown.write().push(n),
+                        div { key: "{n}", class: "rf-row", dir: "rtl",
                             span { class: "rv-ref", "{s}:{a}" }
                             span { class: if differs { "rf-own differs" } else { "rf-own" }, "data-tip": differs.then_some("Reads differently here"), "{wording}" }
-                            span { class: if hidden { "rf-follow hidden" } else { "rf-follow" }, "{follow} …" }
+                            span { class: "rf-follow", "{follow} …" }
                         }
                     }
                 }

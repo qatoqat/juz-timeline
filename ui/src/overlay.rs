@@ -84,6 +84,7 @@ pub fn OverlayLane(lo: f32, hi: f32, detail: bool) -> Element {
     let mut spots: Vec<(Spot, f32)> = source.into_iter().filter(|s| inside(s.pos)).map(|s| { let px = x(s.pos); (s, px) }).collect();
     spots.sort_by(|a, b| a.1.total_cmp(&b.1));
     let size = if detail { SPOT_MAX } else { 8.0 };
+    let show_sajdah = crate::SHOW_SAJDAH();
 
     rsx! {
         div { class: if detail { "lane dots" } else { "lane marks" },
@@ -96,9 +97,9 @@ pub fn OverlayLane(lo: f32, hi: f32, detail: bool) -> Element {
                             class: format!(
                                 "spot w{}{}{}{}{}{}{}",
                                 spot.weight.min(3),
-                                if spot.sajdah { " sajdah" } else { "" },
+                                if spot.sajdah && show_sajdah { " sajdah" } else { "" },
                                 if spot.ruku { " ruku" } else { "" },
-                                if spot.unlisted { " unlisted" } else { "" },
+                                if spot.unlisted && show_sajdah { " unlisted" } else { "" },
                                 if picked == Some(spot.key) { " picked" } else { "" },
                                 if detail && marked.contains(&spot.key) { " marked" } else { "" },
                                 if hot.contains(&spot.key) { " hot" } else { "" },
@@ -114,7 +115,7 @@ pub fn OverlayLane(lo: f32, hi: f32, detail: bool) -> Element {
                                 }
                             },
                             oncontextmenu: move |e| open_menu(menu, &e, Target::Ayah(s, a)),
-                            if spot.sajdah { Dome {} }
+                            if spot.sajdah && show_sajdah { Dome {} }
                             if spot.ruku && size >= RUKU_MIN { i { class: "rk-in", "ع" } }
                         }
                     }

@@ -14,7 +14,6 @@ pub struct Cell {
     pub tip: String,
     pub heavy: bool,
     pub level: u8,
-    pub mark: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -74,7 +73,6 @@ pub fn BandLane(lo: f32, hi: f32, width: f32) -> Element {
                     onmouseenter: move |_| hovered.set(Some(cell.id)),
                     onmouseleave: move |_| hovered.set(None),
                     onclick: move |_| chosen.set(if chosen() == Some(cell.id) { None } else { Some(cell.id) }),
-                    if cell.mark { i { class: "slip" } }
                     span { class: "tl", "{fit(&cell.label, cell.number, w * width / 100.0)}" }
                 }
             }

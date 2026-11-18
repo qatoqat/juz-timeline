@@ -2,8 +2,6 @@
 .outline-bar { display: flex; align-items: center; gap: 10px; }
 .theme-search { flex: 0 1 360px; font: inherit; font-size: 14px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); outline: none; }
 .theme-search:focus { border-color: var(--soft); }
-.drill { margin-left: auto; font: inherit; font-size: 13px; padding: 2px 12px; border: 1px solid var(--line); border-radius: 14px; background: transparent; color: var(--soft); cursor: pointer; }
-.drill.on { background: var(--bm); border-color: var(--bm); color: var(--bg); }
 .themes-note { margin: 4px 0 0; color: var(--soft); }
 .ruku-group { border-left: 2px solid var(--edge); padding-left: 12px; }
 .ruku-head { margin: 0 0 4px; font-size: 12px; color: var(--soft); }
@@ -13,12 +11,11 @@
 .theme-row.on { background: color-mix(in srgb, var(--juz-on-a) 35%, transparent); }
 .theme-row .num { color: var(--soft); font-variant-numeric: tabular-nums; text-align: right; }
 .theme-row .span { font-size: 12px; color: var(--soft); font-variant-numeric: tabular-nums; }
-.theme-row .text.hidden { filter: blur(5px); user-select: none; }
 .theme-row .len { font-size: 12px; color: var(--muted); text-align: right; }
 @media (max-width: 640px) {
   .theme-row { grid-template-columns: 24px 1fr 40px; }
   .theme-row .span { grid-column: 2; }
   .theme-row .text { grid-column: 1 / -1; }
 }
-.outline-list { max-height: min(55vh, 520px); overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 6px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; overscroll-behavior: contain; }
+.outline-list { max-height: min(55vh, 520px); overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 6px; overscroll-behavior: contain; }
 .theme-row .text.none { color: var(--muted); font-style: italic; }

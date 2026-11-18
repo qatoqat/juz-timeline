@@ -164,10 +164,9 @@ def main():
     expect(len(covered) == 6236, f"themes cover {len(covered)} of 6236 ayat")
 
     topics = json.loads((REPO / "explore" / "assets" / "topics.json").read_text(encoding="utf-8"))
-    text = json.loads((REPO / "explore" / "assets" / "topic-ayat.json").read_text(encoding="utf-8"))
     n = len(topics["t"])
     expect(len(topics["a"]) == n, "topics: ayat list count differs from concept count")
-    for i, (_, parent, _, english, _, _) in enumerate(topics["t"]):
+    for i, (_, parent, _, english) in enumerate(topics["t"]):
         seen, p = {i}, parent
         while p >= 0:
             expect(p < n and p not in seen, f"topics: bad parent chain at {english}")
@@ -175,12 +174,8 @@ def main():
                 break
             seen.add(p)
             p = topics["t"][p][1]
-    flat = [a for ayat in topics["a"] for a in ayat]
-    expect(all(0 <= a < len(verses) for a in flat), "topics: ayah index out of range")
+    expect(all(0 <= a < len(verses) for ayat in topics["a"] for a in ayat), "topics: ayah index out of range")
     expect(all(ayat == sorted(set(ayat)) for ayat in topics["a"]), "topics: ayat not sorted and unique")
-    expect(all(0 <= i < n and 0 <= j < n and i != j for i, j, *_ in topics["l"] + topics["c"]), "topics: link to an unknown concept")
-    expect(text["k"] == sorted(set(flat)) and len(text["t"]) == len(text["k"]), "topic-ayat.json does not match the concepts' ayat")
-    expect(all(t == " ".join(verses[k]["words"]) for k, t in zip(text["k"], text["t"])), "topic-ayat.json text differs from Content Sync")
 
     links, twin_count, hit, total = check_relations(verses, themes, similar, topics)
 

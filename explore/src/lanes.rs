@@ -128,6 +128,7 @@ pub fn use_lanes(view: View, band: Band, overlay: Overlay, arcs: Arcs) {
         let mut dots: Vec<Spot> = MUSHAF
             .sajdah
             .iter()
+            .filter(|_| quran_ui::SHOW_SAJDAH())
             .map(|sj| Spot { key: (sj.surah, sj.ayah), pos: sj.pos, tip: format!("{}:{} · sajdah", sj.surah, sj.ayah), sajdah: true, unlisted: !sj.listed, ..Spot::default() })
             .collect();
         if let (Some(t), Some(rel)) = (chosen, rel) {

@@ -2,9 +2,7 @@ use crate::compare::{phrase_in, Compare};
 use crate::ladder::Ladder;
 use crate::relations::{key_of, Link, Relations, SharedRelations, ECHO, STORY, WORDING};
 use crate::revise::RefrainChips;
-use crate::spine::save_drill;
 use crate::themes::{describe, open, Theme, Themes, View};
-use crate::tree::Drill;
 use dioxus::prelude::*;
 use quran_ui::band::Band;
 use quran_ui::overlay::{Overlay, Selection};
@@ -62,7 +60,6 @@ pub fn ThemePanel(themes: Themes, t: usize) -> Element {
     let view = use_context::<View>();
     let band = use_context::<Band>();
     let selection = use_context::<Selection>();
-    let Drill(mut drill) = use_context::<Drill>();
     let list = themes.0.clone();
     let theme = &list[t];
     let rel = (view.rel)();
@@ -85,15 +82,6 @@ pub fn ThemePanel(themes: Themes, t: usize) -> Element {
                 div { class: "tp-tools",
                     button { class: "nav", disabled: !trail.can(-1), "data-tip": "Back", onclick: move |_| go(-1, &back_list), "‹" }
                     button { class: "nav", disabled: !trail.can(1), "data-tip": "Forward", onclick: move |_| go(1, &forward_list), "›" }
-                    button {
-                        class: if drill() { "drill on" } else { "drill" },
-                        "data-tip": "Test yourself: hide the differing words, which surah, and what follows",
-                        onclick: move |_| {
-                            drill.toggle();
-                            save_drill(drill());
-                        },
-                        span { class: "ar", "اختبار" } " Test"
-                    }
                 }
             }
             p { class: "tp-en", "{describe(theme)}" }
@@ -173,8 +161,6 @@ fn LinkRow(themes: Themes, t: usize, link: Option<usize>, p: usize) -> Element {
     let band = use_context::<Band>();
     let selection = use_context::<Selection>();
     let overlay = use_context::<Overlay>();
-    let Drill(drill) = use_context::<Drill>();
-    let mut revealed = use_signal(|| false);
     let Some(rel) = (view.rel)() else { return rsx! {} };
     let data = (view.data)();
     let list = themes.0.clone();
@@ -200,7 +186,6 @@ fn LinkRow(themes: Themes, t: usize, link: Option<usize>, p: usize) -> Element {
     });
     let (lo, hi) = rel.spans[p];
     let keys: Vec<_> = (lo..=hi).map(key_of).collect();
-    let hide = drill() && !revealed();
     let go_list = list.clone();
 
     rsx! {
@@ -216,20 +201,15 @@ fn LinkRow(themes: Themes, t: usize, link: Option<usize>, p: usize) -> Element {
                     hot.set(vec![]);
                 },
                 onclick: move |_| {
-                    revealed.set(true);
                     focus.set(None);
                     with.set(if is_open { None } else { Some(p) });
                 },
                 button {
-                    class: if hide { "ref lref hidden" } else { "ref lref" },
-                    "data-tip": if hide { "Which surah? Tap the row to reveal".to_string() } else { format!("Go to {}:{}", partner.surah, partner.from) },
+                    class: "ref lref",
+                    "data-tip": "Go to {partner.surah}:{partner.from}",
                     onclick: move |e| {
                         e.stop_propagation();
-                        if hide {
-                            revealed.set(true);
-                        } else {
-                            open(view, band, selection, &go_list, p, Some(t));
-                        }
+                        open(view, band, selection, &go_list, p, Some(t));
                     },
                     span { class: "ar", "{surah_name(&list, p)}" }
                     " {partner.surah}:{partner.from}–{partner.to}"

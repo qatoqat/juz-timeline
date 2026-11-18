@@ -30,5 +30,3 @@ html quran-explore dist/explore/similar-ayah "Similar ayah · Explore" ar ..
 cp explore/assets/similar.json dist/explore/similar-ayah/
 html quran-explore dist/explore/ayah-theme "Ayah themes · Explore" ar ..
 cp explore/assets/themes.json explore/assets/relations.json dist/explore/ayah-theme/
-html quran-explore dist/explore/ayah-topics "Concepts · Explore" ar ..
-cp explore/assets/topics.json explore/assets/topic-ayat.json dist/explore/ayah-topics/

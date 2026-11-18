@@ -3,7 +3,7 @@ use crate::data::Data;
 use crate::ladder::Ladder;
 use crate::relations::{index_of, key_of, SharedRelations};
 use crate::themes::{describe, Themes, View};
-use crate::tree::{Drill, Shared};
+use crate::tree::Shared;
 use dioxus::prelude::*;
 use quran_ui::menu::{open_menu, Menu, Target};
 use quran_ui::overlay::{Overlay, Selection};
@@ -30,8 +30,6 @@ pub fn phrase_in(d: &Data, family: usize, span: (u16, u16), max: usize) -> Strin
 #[component]
 pub fn Compare(themes: Themes, t: usize, p: usize) -> Element {
     let view = use_context::<View>();
-    let Drill(drill) = use_context::<Drill>();
-    let mut evidence = use_signal(|| false);
     let Some(rel) = (view.rel)() else { return rsx! {} };
     let data = (view.data)();
     let link = rel.links_of[t].iter().map(|&l| &rel.links[l]).find(|l| l.i == p || l.j == p);
@@ -44,7 +42,6 @@ pub fn Compare(themes: Themes, t: usize, p: usize) -> Element {
     });
     let people: Vec<String> = link.map_or(vec![], |l| l.concepts.iter().map(|&c| format!("{} · {}", rel.concepts[c].0, rel.concepts[c].1)).collect());
     let only_people = twins.is_empty() && families.is_empty() && words.is_empty();
-    let spoils = drill() && !evidence() && !(families.is_empty() && words.is_empty());
     let shared_rel = SharedRelations(rel.clone());
     let list = themes.0.clone();
 
@@ -53,10 +50,7 @@ pub fn Compare(themes: Themes, t: usize, p: usize) -> Element {
             for (k, side) in twins {
                 Ladder { key: "{k}", rel: shared_rel.clone(), k, side }
             }
-            if spoils {
-                button { class: "chips-more", onclick: move |_| evidence.set(true), "Show the shared phrases (they reveal the answers)" }
-            }
-            if !families.is_empty() && !spoils {
+            if !families.is_empty() {
                 div { class: "cmp-sec",
                     p { class: "cmp-head", span { class: "ar", "عبارات مشتركة" } " · shared phrases" }
                     match data.clone() {
@@ -77,7 +71,7 @@ pub fn Compare(themes: Themes, t: usize, p: usize) -> Element {
                     }
                 }
             }
-            if !words.is_empty() && !spoils {
+            if !words.is_empty() {
                 div { class: "cmp-sec",
                     p { class: "cmp-head", span { class: "ar", "كلمات نادرة مشتركة" } " · shared rare words" }
                     for (n, (a, wa, b, wb)) in words.into_iter().enumerate() {

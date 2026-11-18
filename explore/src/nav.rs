@@ -22,7 +22,12 @@ impl Nav {
         }
         let mut history = self.history.peek().clone();
         let cursor = *self.cursor.peek();
-        if history.get(cursor) == Some(&(key, family)) {
+        // Picking another ayah of the same tree moves within it: the entry follows, no new step.
+        if let Some(entry) = history.get_mut(cursor).filter(|e| e.1 == family) {
+            if entry.0 != key {
+                entry.0 = key;
+                self.history.set(history);
+            }
             return;
         }
         history.truncate(if history.is_empty() { 0 } else { cursor + 1 });
@@ -77,8 +82,8 @@ pub fn NavBar() -> Element {
     rsx! {
         div { class: "navbar",
             button { class: "nav", disabled: !nav.can(-1), "data-tip": "Back", onclick: move |_| nav.go(-1, overlay, selection), "‹ Back" }
+            span { class: "nav-pos", "{at} / {total}" }
             button { class: "nav", disabled: !nav.can(1), "data-tip": "Forward", onclick: move |_| nav.go(1, overlay, selection), "Forward ›" }
-            if total > 1 { span { class: "nav-pos", "{at} / {total}" } }
         }
     }
 }

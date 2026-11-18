@@ -54,7 +54,7 @@ fn surah_score(i: usize, query: &str, number: Option<usize>) -> u32 {
     }
 }
 
-fn suggestions(query: &str) -> Vec<(Focus, String)> {
+fn suggestions(query: &str, hizb: bool, sajdah: bool) -> Vec<(Focus, String)> {
     let m = &*MUSHAF;
     let q = query.trim().to_lowercase();
     if q.is_empty() {
@@ -64,20 +64,26 @@ fn suggestions(query: &str) -> Vec<(Focus, String)> {
     let words = q.trim_matches(|c: char| c.is_ascii_digit() || c.is_whitespace());
     let wants_juz = words.starts_with("juz") || words.starts_with("jz") || words.contains("جزء");
     let wants_sajdah = words.starts_with("saj") || words.contains("سجد");
+    let wants_hizb = words.starts_with("hiz") || words.starts_with("hz") || words.contains("حزب");
 
-    let surah = (!wants_juz && !wants_sajdah)
+    let surah = (!wants_juz && !wants_sajdah && !wants_hizb)
         .then(|| (0..114).map(|i| (surah_score(i, &q, number), i)).filter(|&(sc, _)| sc > 0).max_by_key(|&(sc, i)| (sc, usize::MAX - i)))
         .flatten()
         .map(|(_, i)| i);
     let juz = match number {
-        Some(n) if (1..=30).contains(&n) && !wants_sajdah => Some(n - 1),
+        Some(n) if (1..=30).contains(&n) && !wants_sajdah && !wants_hizb => Some(n - 1),
+        _ if wants_hizb => None,
         _ => surah.map(|i| m.juz.iter().position(|j| m.surahs[i].start < j.end - 1e-3).unwrap_or(29)),
     };
-    let sajdah = match number {
+    let hizb = match number {
+        Some(n) if hizb && wants_hizb && (1..=60).contains(&n) => Some(n - 1),
+        _ => None,
+    };
+    let sajdah = if !sajdah { None } else { match number {
         Some(n) if wants_sajdah && (1..=15).contains(&n) => Some(n - 1),
         _ if wants_sajdah && number.is_none() => Some(0),
         _ => surah.and_then(|i| m.sajdah.iter().position(|sj| sj.surah as usize == i + 1)),
-    };
+    } };
 
     let mut out = vec![];
     if let Some(i) = surah {
@@ -88,6 +94,10 @@ fn suggestions(query: &str) -> Vec<(Focus, String)> {
         let j = &m.juz[i];
         out.push((Focus::Juz(i), format!("Juz {} · from {}:{}", j.num, j.from.0, j.from.1)));
     }
+    if let Some(h) = hizb {
+        let r = &m.rub[4 * h];
+        out.push((Focus::Hizb(h), format!("Hizb {} · from {}:{}", h + 1, r.from.0, r.from.1)));
+    }
     if let Some(i) = sajdah {
         let sj = &m.sajdah[i];
         out.push((Focus::Sajdah(i), format!("Sajdah {} · {}:{}", i + 1, sj.surah, sj.ayah)));
@@ -96,11 +106,11 @@ fn suggestions(query: &str) -> Vec<(Focus, String)> {
 }
 
 #[component]
-pub fn Search(selected: Signal<Option<Focus>>) -> Element {
+pub fn Search(selected: Signal<Option<Focus>>, hizb: bool, placeholder: String) -> Element {
     let mut query = use_signal(String::new);
     let mut active = use_signal(|| 0usize);
     let mut open = use_signal(|| false);
-    let items = suggestions(&query());
+    let items = suggestions(&query(), hizb, crate::SHOW_SAJDAH());
     let count = items.len();
     let mut choose = move |f: Focus| {
         selected.set(Some(f));
@@ -114,7 +124,7 @@ pub fn Search(selected: Signal<Option<Focus>>) -> Element {
             input {
                 r#type: "search",
                 dir: "auto",
-                placeholder: "Search surah, juz or sajdah",
+                placeholder: "{placeholder}",
                 value: "{query}",
                 oninput: move |e| {
                     query.set(e.value());

@@ -4,10 +4,7 @@ use crate::outline::Outline;
 use crate::relations::{index_of, Relations};
 use crate::relpanel::ThemePanel;
 use crate::revise::Revise;
-use crate::slips::{twin_key, Slips};
-use crate::spine::load_drill;
 use crate::trail::Trail;
-use crate::tree::Drill;
 use dioxus::prelude::*;
 use quran_ui::arcs::Arcs;
 use quran_ui::band::{Band, Cell};
@@ -64,7 +61,7 @@ pub fn describe(t: &Theme) -> String {
     }
 }
 
-fn cells(themes: &[Theme], rel: Option<&Relations>, slips: &Slips) -> Vec<Cell> {
+fn cells(themes: &[Theme], rel: Option<&Relations>) -> Vec<Cell> {
     themes
         .iter()
         .enumerate()
@@ -80,7 +77,6 @@ fn cells(themes: &[Theme], rel: Option<&Relations>, slips: &Slips) -> Vec<Cell> 
                 tip: format!("{}:{}–{} · {}{}", t.surah, t.from, t.to, describe(t), if twins.is_empty() { String::new() } else { format!(" · ≈ {} look-alike", twins.len()) }),
                 heavy: (r.surah, r.ayah) == (t.surah, t.from),
                 level: twins.len().min(4) as u8,
-                mark: rel.is_some_and(|rel| twins.iter().any(|&k| slips.has(&twin_key(&rel.twins[k])))),
             }
         })
         .collect()
@@ -107,7 +103,6 @@ pub struct View {
     pub rel: Signal<Option<Rc<Relations>>>,
     pub rel_failed: Signal<bool>,
     pub data: Signal<Option<Rc<Data>>>,
-    pub slips: Signal<Slips>,
     pub trail: Trail<(Option<usize>, Option<usize>)>,
 }
 
@@ -147,7 +142,6 @@ pub fn ThemesPage() -> Element {
     let band = use_context_provider(|| Band { cells: Signal::new(vec![]), hovered: Signal::new(None), chosen: Signal::new(None) });
     let overlay = use_context_provider(|| Overlay { dots: Signal::new(vec![]), marks: Signal::new(vec![]), picked: Signal::new(None), hot: Signal::new(vec![]) });
     let arcs = use_context_provider(|| Arcs { arcs: Signal::new(vec![]), ticks: Signal::new(vec![]), picked: Signal::new(None) });
-    use_context_provider(|| Drill(Signal::new(load_drill())));
     let view = use_context_provider(|| View {
         themes: Signal::new(None),
         with: Signal::new(None),
@@ -157,7 +151,6 @@ pub fn ThemesPage() -> Element {
         rel: Signal::new(None),
         rel_failed: Signal::new(false),
         data: Signal::new(None),
-        slips: Signal::new(Slips::load()),
         trail: Trail::new(),
     });
     use_future(move || async move {
@@ -195,10 +188,10 @@ pub fn ThemesPage() -> Element {
         }
     });
     use_effect(move || {
-        let (list, rel, slips) = ((view.themes)(), (view.rel)(), (view.slips)());
+        let (list, rel) = ((view.themes)(), (view.rel)());
         if let Some(list) = list {
             let mut cells_signal = band.cells;
-            cells_signal.set(cells(&list, rel.as_deref(), &slips));
+            cells_signal.set(cells(&list, rel.as_deref()));
         }
     });
     use_lanes(view, band, overlay, arcs);

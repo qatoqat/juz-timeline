@@ -38,7 +38,7 @@ pub struct Data {
 
 pub fn normalize(word: &str) -> String {
     word.chars()
-        .filter(|c| !matches!(*c as u32, 0x0610..=0x061A | 0x064B..=0x065F | 0x0670 | 0x06D6..=0x06ED))
+        .filter(|c| !matches!(*c as u32, 0x00A0 | 0x0610..=0x061A | 0x064B..=0x065F | 0x0670 | 0x06D6..=0x06ED))
         .map(|c| match c {
             'أ' | 'إ' | 'آ' | 'ٱ' => 'ا',
             'ى' => 'ي',
@@ -51,12 +51,31 @@ fn strip_prefix(word: &str) -> &str {
     if word.chars().count() > 3 { word.strip_prefix(['و', 'ف']).unwrap_or(word) } else { word }
 }
 
-type Word = (String, String);
+/// (matching form, text as written, index in the ayah)
+type Word = (String, String, usize);
+
+/// A word as written, without the waqf or section signs attached to it.
+fn spelled(word: &str) -> String {
+    word.split('\u{a0}').filter(|p| !p.chars().all(|c| matches!(c as u32, 0x06D6..=0x06ED))).collect::<Vec<_>>().join("\u{a0}")
+}
+
+/// The distinct spellings, when there is more than one.
+fn forms(spellings: impl Iterator<Item = String>) -> Vec<String> {
+    let mut forms: Vec<String> = spellings.collect();
+    forms.sort();
+    forms.dedup();
+    if forms.len() > 1 { forms } else { vec![] }
+}
+
+/// Words of the picked ayah, by index, that other ayat on its tree path write differently, with each spelling.
+pub type Spellings = HashMap<usize, Vec<String>>;
 
 struct Item {
     ayah: usize,
     late: bool,
     seq: Vec<Word>,
+    /// Words of the ayah lie beyond `seq` (before-side only: the ayah starts earlier than the window).
+    more: bool,
 }
 
 #[derive(Clone, PartialEq, Default)]
@@ -69,6 +88,8 @@ pub struct Node {
     pub end: bool,
     pub prefix: bool,
     pub forms: Vec<String>,
+    /// A before-side tip that does not reach the start of its ayah (shown with a leading "…").
+    pub cut: bool,
 }
 
 impl Node {
@@ -113,6 +134,7 @@ pub struct TreeData {
     pub after: Vec<Node>,
     pub before: Vec<Node>,
     pub late: Vec<usize>,
+    pub spellings: Spellings,
 }
 
 impl Data {
@@ -152,6 +174,12 @@ impl Data {
         (s, s + self.families[family].len)
     }
 
+    /// The family's words as the ayah writes them (empty if the ayah is not a member).
+    pub fn span_words(&self, family: usize, ayah: usize) -> Vec<&str> {
+        let (s, e) = self.span_in(family, ayah);
+        self.words(ayah).get(s..e).map(<[&str]>::to_vec).unwrap_or_default()
+    }
+
     pub fn weight(&self, family: usize) -> usize {
         self.families[family].len * self.families[family].members.len()
     }
@@ -171,17 +199,6 @@ impl Data {
         format!("{} … {}", words[start..start + max - 1].join(" "), words[start + len - 2..start + len].join(" "))
     }
 
-    pub fn search(&self, query: &str, limit: usize) -> Vec<usize> {
-        let q = normalize(query.trim());
-        if q.chars().count() < 2 {
-            return vec![];
-        }
-        let mut hits: Vec<usize> = (0..self.families.len()).filter(|&f| normalize(&self.phrase(f)).contains(&q)).collect();
-        hits.sort_by_key(|&f| usize::MAX - self.weight(f));
-        hits.truncate(limit);
-        hits
-    }
-
     pub fn default_root(&self, ayah: usize) -> Option<usize> {
         self.family_of[ayah].iter().copied().max_by_key(|&f| (self.weight(f), self.families[f].len))
     }
@@ -195,7 +212,7 @@ impl Data {
 
     fn seq(&self, a: usize, range: impl Iterator<Item = usize>) -> Vec<Word> {
         let words = self.words(a);
-        range.map(|i| (normalize(words[i]), words[i].to_string())).collect()
+        range.map(|i| (normalize(words[i]), words[i].to_string(), i)).collect()
     }
 
     fn late_items(&self, root: usize, picked: usize) -> Vec<Item> {
@@ -222,7 +239,7 @@ impl Data {
         late.sort_by_key(|&(a, _, o)| (usize::MAX - o, a));
         late.truncate(LATE_LIMIT);
         late.sort_by_key(|&(a, ..)| a);
-        late.into_iter().map(|(a, p, _)| Item { ayah: a, late: true, seq: self.seq(a, p..self.words(a).len()) }).collect()
+        late.into_iter().map(|(a, p, _)| Item { ayah: a, late: true, seq: self.seq(a, p..self.words(a).len()), more: false }).collect()
     }
 
     pub fn rows(&self, family: usize) -> Vec<Row> {
@@ -262,7 +279,7 @@ impl Data {
         let mut after: Vec<Item> = fam
             .members
             .iter()
-            .map(|&(a, s)| Item { ayah: a, late: false, seq: self.seq(a, s + fam.len..self.words(a).len()) })
+            .map(|&(a, s)| Item { ayah: a, late: false, seq: self.seq(a, s + fam.len..self.words(a).len()), more: false })
             .collect();
         let late_items = self.late_items(family, picked);
         let late: Vec<usize> = late_items.iter().map(|i| i.ayah).collect();
@@ -270,9 +287,19 @@ impl Data {
         let before = fam
             .members
             .iter()
-            .map(|&(a, s)| Item { ayah: a, late: false, seq: self.seq(a, (s.saturating_sub(BEFORE_WORDS)..s).rev()) })
+            .map(|&(a, s)| Item { ayah: a, late: false, seq: self.seq(a, (s.saturating_sub(BEFORE_WORDS)..s).rev()), more: s > BEFORE_WORDS })
             .collect();
-        TreeData { after: branch(after, false), before: branch(before, true), late }
+        let ps = self.start_in(family, picked);
+        let mut spellings = Spellings::new();
+        for j in 0..fam.len {
+            let f = forms(fam.members.iter().map(|&(a, s)| spelled(self.words(a)[s + j])));
+            if !f.is_empty() {
+                spellings.insert(ps + j, f);
+            }
+        }
+        let after = branch(after, false, picked, &mut spellings);
+        let before = branch(before, true, picked, &mut spellings);
+        TreeData { after, before, late, spellings }
     }
 }
 
@@ -284,7 +311,29 @@ fn display(words: &[Word], reversed: bool) -> Vec<String> {
     shown
 }
 
-fn branch(items: Vec<Item>, reversed: bool) -> Vec<Node> {
+/// The node's spellings over its first `n` words, noting each word of the picked ayah written differently.
+fn spellings(group: &[Item], n: usize, reversed: bool, picked: usize, out: &mut Spellings) -> Vec<String> {
+    if group.len() < 2 {
+        return vec![];
+    }
+    if let Some(me) = group.iter().find(|i| i.ayah == picked) {
+        for j in 0..n {
+            let f = forms(group.iter().map(|i| spelled(&i.seq[j].1)));
+            if !f.is_empty() {
+                out.insert(me.seq[j].2, f);
+            }
+        }
+    }
+    forms(group.iter().map(|i| {
+        let mut words: Vec<String> = i.seq[..n].iter().map(|w| spelled(&w.1)).collect();
+        if reversed {
+            words.reverse();
+        }
+        words.join(" ")
+    }))
+}
+
+fn branch(items: Vec<Item>, reversed: bool, picked: usize, out: &mut Spellings) -> Vec<Node> {
     let mut groups: Vec<(Option<String>, Vec<Item>)> = vec![];
     for item in items {
         let head = item.seq.first().map(|w| w.0.clone());
@@ -304,27 +353,27 @@ fn branch(items: Vec<Item>, reversed: bool) -> Vec<Node> {
             if head.is_none() {
                 return Node { end: true, ayat, late, ..Node::default() };
             }
-            let first = &group[0].seq;
+            let first = &group[group.iter().position(|i| i.ayah == picked).unwrap_or(0)].seq;
             let identical = group.iter().all(|i| i.seq.len() == first.len() && i.seq.iter().zip(first).all(|(a, b)| a.0 == b.0));
             if group.len() == 1 || identical {
                 let take = first.len().min(LEAF_WORDS);
                 let words = display(&first[..take], reversed);
                 let rest = if reversed { vec![] } else { display(&first[take..], false) };
-                return Node { words, rest, ayat, late, prefix, ..Node::default() };
+                let cut = reversed && (first.len() > take || group.iter().any(|i| i.more));
+                let forms = spellings(&group, if reversed { take } else { first.len() }, reversed, picked, out);
+                return Node { words, rest, ayat, late, prefix, forms, cut, ..Node::default() };
             }
             let mut common = 0;
-            while common < CHAIN_WORDS && group.iter().all(|i| i.seq.len() > common && i.seq[common].0 == first[common].0) {
+            while common < CHAIN_WORDS && common < first.len() && group.iter().all(|i| i.seq.len() > common && i.seq[common].0 == first[common].0) {
                 common += 1;
             }
             let words = display(&first[..common], reversed);
-            let mut forms: Vec<String> = group.iter().map(|i| display(&i.seq[..common], reversed).join(" ")).collect();
-            forms.sort();
-            forms.dedup();
-            let forms = if forms.len() > 1 { forms } else { vec![] };
+            let forms = spellings(&group, common, reversed, picked, out);
             let stop = reversed && common >= BEFORE_WORDS;
+            let cut = stop && group.iter().any(|i| i.more || i.seq.len() > common);
             let rest: Vec<Item> = group.into_iter().map(|i| Item { seq: i.seq[common..].to_vec(), ..i }).collect();
-            let kids = if stop { vec![] } else { branch(rest, reversed) };
-            Node { words, ayat, late, kids, prefix, forms, ..Node::default() }
+            let kids = if stop { vec![] } else { branch(rest, reversed, picked, out) };
+            Node { words, ayat, late, kids, prefix, forms, cut, ..Node::default() }
         })
         .collect()
 }

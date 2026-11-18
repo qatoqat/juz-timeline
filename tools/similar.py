@@ -20,6 +20,9 @@ COMMON_DF = 150
 RARE_DF = 40
 VARIANT_RATIO = 0.7
 VARIANT_MIN_WORDS = 4
+BURIED_LEAD = 12
+BURIED_RUN = 5
+BURIED_REST = 5
 
 
 def load():
@@ -62,6 +65,43 @@ def phrase_families(words):
 
 def find(ws, g):
     return next(k for k in range(len(ws) - len(g) + 1) if tuple(ws[k:k + len(g)]) == g)
+
+
+def same_start(a, b):
+    n = 0
+    while n < len(a) and n < len(b) and a[n] == b[n]:
+        n += 1
+    return n
+
+
+def buried(words, g, members):
+    """The one member that has the phrase mid-ayah while at least two others open their ayah with it, when it reaches the
+    phrase after 12+ words of its own, shares only a short run with them and then goes on alone."""
+    at = {i: find(words[i], g) for i in members}
+    inner = [i for i in members if at[i]]
+    if len(members) < 3 or len(inner) != 1:
+        return None
+    a = inner[0]
+    rest = words[a][at[a] + len(g):]
+    run = len(g) + max(same_start(rest, words[i][len(g):]) for i in members if i != a)
+    return a if at[a] >= BURIED_LEAD and run <= BURIED_RUN and len(words[a]) - at[a] - run >= BURIED_REST else None
+
+
+def drop_buried(words, families):
+    kept, reduced = {}, []
+    for g, members in families.items():
+        a = buried(words, g, members)
+        kept[g] = members - {a}
+        if a is not None:
+            reduced.append(g)
+    same = collections.defaultdict(list)
+    for g, s in kept.items():
+        same[frozenset(s)].append(g)
+    for g in reduced:
+        # The ayat left all open with g: a longer family of exactly these ayat already shows it.
+        if any(len(h) > len(g) and h[:len(g)] == g for h in same[frozenset(kept[g])]):
+            del kept[g]
+    return kept
 
 
 def lcs(a, b):
@@ -131,7 +171,7 @@ def main():
     keys = [[s, a] for s, a, _, _ in rows]
     text = [shown for _, _, shown, _ in rows]
 
-    families = phrase_families(words)
+    families = drop_buried(words, phrase_families(words))
     ordered = sorted(families.items(), key=lambda kv: (-len(kv[1]), -len(kv[0])))
     pairs = sorted(variants(words, families), key=lambda p: -p[2])
 

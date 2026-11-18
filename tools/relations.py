@@ -35,7 +35,7 @@ EV_PHRASES, EV_CONCEPTS, EV_WORDS, EV_WORD_DF, OPEN_WORDS = 3, 2, 4, 60, 4
 PEOPLE_ROOTS = ["Historic People", "Historic Person", "Messenger", "Prophet"]
 NOT_PEOPLE = ["Muhammad"]
 # Ontology tags that name someone absent from the passage (Shu'ayb's Madyan on Lut's story, Pharaoh on the Ibn Maryam
-# passage). Ignored here only; the Concepts page shows the source as it is.
+# passage). Ignored here only; tools/data/ontology.json keeps the source as it is.
 FIXES = [("Madyan", (26, 160), (26, 173)), ("Madyan", (27, 54), (27, 57)), ("Pharaoh", (43, 57), (43, 86))]
 STOP = set("""the and of to a in for who his is not be are their will those from on with that do they no has all one as him he
 them it have but was there your against if shall were by this can its which what an or at about been only when how even

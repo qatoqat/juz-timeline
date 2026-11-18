@@ -1,11 +1,9 @@
-use crate::card::{Card, Quiz};
 use crate::data::Data;
 use crate::overview::RukuList;
 use crate::nav::{Nav, NavBar};
-use crate::spine::{load_drill, plural, Spine, Variants};
-use crate::tree::{Drill, Shared, Tree};
+use crate::spine::{plural, Spine, Variants};
+use crate::tree::{Shared, Tree};
 
-const CARD_MAX: usize = 4;
 use dioxus::prelude::*;
 use quran_ui::overlay::{ayah_pos, range_of, AyahKey, Overlay, Selection, Spot};
 use quran_ui::MUSHAF;
@@ -14,8 +12,6 @@ use std::rc::Rc;
 
 const SOURCE: &str = "https://quran.foundation";
 const FETCH: &str = r#"fetch("similar.json").then(r => r.text()).then(t => dioxus.send(t))"#;
-const SEARCH_LIMIT: usize = 12;
-const CHIP_WORDS: usize = 4;
 
 fn dots(data: &Data) -> Vec<Spot> {
     let m = &*MUSHAF;
@@ -75,7 +71,6 @@ pub fn SimilarAyah() -> Element {
         hot: Signal::new(vec![]),
     });
     use_effect(move || quran_ui::hash::set(&[("ayah", (overlay.picked)().map(|(s, a)| format!("{s}:{a}")))]));
-    use_context_provider(|| Drill(Signal::new(load_drill())));
     let mut root = use_signal(|| None::<usize>);
     let mut pending = use_signal(|| None::<usize>);
     let nav = use_context_provider(|| Nav::new(root, pending));
@@ -135,104 +130,48 @@ pub fn SimilarAyah() -> Element {
 }
 
 #[component]
-fn Chips(data: Shared, title: Option<String>, families: Vec<usize>, pick: EventHandler<usize>) -> Element {
-    let d = data.0.clone();
-    rsx! {
-        if let Some(t) = title { p { class: "chips-head", "{t}" } }
-        div { class: "chips", dir: "rtl",
-            for f in families {
-                button {
-                    key: "{f}",
-                    class: "chip",
-                    "data-tip": "{d.phrase(f)} · {plural(d.families[f].members.len(), \"ayah\")}",
-                    onclick: move |_| pick.call(f),
-                    "{d.short_phrase(f, CHIP_WORDS)}"
-                    span { class: "badge", "×{d.families[f].members.len()}" }
-                }
-            }
-        }
-    }
-}
-
-#[component]
-fn Panel(data: Option<Shared>, root: Signal<Option<usize>>, pending: Signal<Option<usize>>) -> Element {
+pub(crate) fn Panel(data: Option<Shared>, root: Signal<Option<usize>>, pending: Signal<Option<usize>>) -> Element {
     let overlay = use_context::<Overlay>();
     let selection = use_context::<Selection>();
-    let Drill(drill) = use_context::<Drill>();
-    let mut query = use_signal(String::new);
     let Some(shared) = data else { return rsx! { p { class: "groups-note", "Loading similar ayat…" } } };
     let d = shared.0.clone();
     let range = (selection.selected)().map(range_of);
     let picked = (overlay.picked)().and_then(|key| d.slot.get(&key).copied());
-    let searching = !query().trim().is_empty();
-    let results = d.search(&query(), SEARCH_LIMIT);
-
-    let pick_d = d.clone();
-    let pick = move |f: usize| {
-        let inside = range.and_then(|(lo, hi)| pick_d.families[f].members.iter().find(|m| pick_d.pos[m.0] >= lo && pick_d.pos[m.0] < hi));
-        let (a, _) = *inside.unwrap_or(&pick_d.families[f].members[0]);
-        pending.set(Some(f));
-        query.set(String::new());
-        if inside.is_some() {
-            let mut picked = overlay.picked;
-            picked.set(Some(pick_d.keys[a]));
-        } else {
-            selection.show(pick_d.keys[a], overlay);
-        }
-    };
 
     rsx! {
         div { class: "similar",
-            div { class: "finder",
-                input {
-                    class: "phrase-search",
-                    r#type: "search",
-                    dir: "rtl",
-                    placeholder: "ابحث عن عبارة · search a phrase",
-                    value: "{query}",
-                    oninput: move |e| query.set(e.value()),
-                }
-                if searching && results.is_empty() { span { class: "groups-note", "No shared phrase matches." } }
-            }
-            if searching && !results.is_empty() {
-                Chips { data: shared.clone(), title: None, families: results, pick }
-            }
             match picked {
                 Some(a) => rsx! {
                     div { class: "picked-bar",
-                        NavBar {}
-                        if range.is_some() {
-                            button {
-                                class: "nav",
-                                onclick: move |_| {
-                                    let mut picked = overlay.picked;
-                                    picked.set(None);
-                                },
-                                "Ruku' list"
+                        div { class: "pb-side",
+                            if range.is_some() {
+                                button {
+                                    class: "nav",
+                                    onclick: move |_| {
+                                        let mut picked = overlay.picked;
+                                        picked.set(None);
+                                    },
+                                    "Ruku' list"
+                                }
                             }
                         }
+                        NavBar {}
+                        div { class: "pb-side" }
                     }
                     Spine { data: shared.clone(), ayah: a, root }
-                    if let Some(f) = root() {
-                        if d.families[f].members.len() <= CARD_MAX {
-                            Card { key: "c{f}-{a}", data: shared.clone(), family: f, picked: a }
-                        } else {
-                            Tree { key: "{f}-{a}", data: shared.clone(), family: f, picked: a }
-                        }
-                        if drill() {
-                            Quiz { key: "q{f}", data: shared.clone(), family: f }
-                        }
+                    // `root` catches up with a new pick one render later; never draw a family the ayah is not in.
+                    if let Some(f) = root().filter(|f| d.family_of[a].contains(f)) {
+                        Tree { key: "{f}-{a}", data: shared.clone(), family: f, picked: a }
                     }
                     Variants { data: shared.clone(), ayah: a }
                 },
                 None if (overlay.picked)().is_some() => rsx! { p { class: "groups-note", "This ayah has no similar ayat in this data." } },
-                None if !searching && range.is_some() => rsx! {
+                None if range.is_some() => rsx! {
                     RukuList { data: shared.clone(), lo: range.map_or(0.0, |r| r.0), hi: range.map_or(0.0, |r| r.1), pending }
                 },
-                None if range.is_none() && !searching => rsx! {
-                    p { class: "groups-note", "Select a surah or juz to see its shared phrases, click a dot under the rub' row, or search a phrase." }
+                None => rsx! {
+                    p { class: "groups-note", "Select a surah, juz or hizb to see its shared phrases, or click a dot under the rub' row." }
                 },
-                None => rsx! {},
             }
         }
     }

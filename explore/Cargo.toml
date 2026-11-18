@@ -10,3 +10,6 @@ wasm-bindgen = { workspace = true }
 web-sys = { workspace = true }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
+
+[dev-dependencies]
+dioxus-ssr = "0.7.10"

@@ -1,38 +1,67 @@
-use crate::tree::{ayah_label, light, surah_name, unlight, Drill, Shared};
+use crate::tree::{ayah_label, light, surah_name, unlight, written_tip, Shared};
 use dioxus::prelude::*;
 use quran_ui::menu::{open_menu, Menu, Target};
 use quran_ui::overlay::{Overlay, Selection};
 
 const SPINE_PAD: usize = 2;
-const DRILL_KEY: &str = "quran-timeline:drill";
+/// A stretch this long that no shared phrase comes near folds into one "…" (about a mushaf line).
+const FOLD_MIN: usize = 8;
 
 pub fn plural(n: usize, word: &str) -> String {
     if n == 1 { format!("1 {word}") } else { format!("{n} {word}s") }
 }
 
-fn storage() -> Option<web_sys::Storage> {
-    web_sys::window()?.local_storage().ok()?
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Cell {
+    Word(usize),
+    /// Words start..end, folded.
+    Fold(usize, usize),
+    /// Folds the words that follow it back from `start`.
+    Unfold(usize),
 }
 
-pub fn load_drill() -> bool {
-    storage().and_then(|s| s.get_item(DRILL_KEY).ok()?).as_deref() == Some("1")
-}
-
-pub fn save_drill(on: bool) {
-    if let Some(s) = storage() {
-        let _ = s.set_item(DRILL_KEY, if on { "1" } else { "0" });
+/// The row's words from 2 before the first phrase to 2 after the last, one cell each, except that a long stretch no
+/// phrase comes near is a single fold unless `open` holds its first word. Phrases are (start, end) word spans.
+pub fn row(spans: &[(usize, usize)], total: usize, open: &[usize]) -> (usize, usize, Vec<Cell>) {
+    let lo = spans.iter().map(|s| s.0).min().unwrap_or(0).saturating_sub(SPINE_PAD);
+    let hi = (spans.iter().map(|s| s.1).max().unwrap_or(total) + SPINE_PAD).min(total);
+    let near = |i: usize| spans.is_empty() || spans.iter().any(|&(s, e)| i + SPINE_PAD >= s && i < e + SPINE_PAD);
+    let mut cells = vec![];
+    let mut i = lo;
+    while i < hi {
+        let end = (i..hi).find(|&j| near(j)).unwrap_or(hi);
+        if end - i < FOLD_MIN {
+            cells.push(Cell::Word(i));
+            i += 1;
+            continue;
+        }
+        if open.contains(&i) {
+            cells.push(Cell::Unfold(i));
+            cells.extend((i..end).map(Cell::Word));
+        } else {
+            cells.push(Cell::Fold(i, end));
+        }
+        i = end;
     }
+    (lo, hi, cells)
+}
+
+/// The grid column (from 1) of a word that has a cell of its own.
+pub fn column(cells: &[Cell], word: usize) -> Option<usize> {
+    cells.iter().position(|&c| c == Cell::Word(word)).map(|n| n + 1)
 }
 
 #[component]
 pub fn Spine(data: Shared, ayah: usize, root: Signal<Option<usize>>) -> Element {
     let overlay = use_context::<Overlay>();
-    let Drill(mut drill) = use_context::<Drill>();
     let menu = use_context::<Signal<Option<Menu>>>();
+    // (ayah, first word) of every fold opened on this page.
+    let mut opened = use_signal(Vec::<(usize, usize)>::new);
     let d = data.0.clone();
     let words = d.words(ayah);
     let (ks, ka) = d.keys[ayah];
     let current = root();
+    let spellings = current.filter(|f| d.family_of[ayah].contains(f)).map(|f| d.tree(f, ayah).spellings).unwrap_or_default();
     let mut spans: Vec<(usize, usize, usize)> = d.family_of[ayah]
         .iter()
         .filter(|&&f| current.is_none_or(|r| !d.folded(f, r, ayah)))
@@ -54,10 +83,29 @@ pub fn Spine(data: Shared, ayah: usize, root: Signal<Option<usize>>) -> Element 
             (f, s, e, layer)
         })
         .collect();
-    let lo = bars.iter().map(|b| b.1).min().unwrap_or(0).saturating_sub(SPINE_PAD);
-    let hi = (bars.iter().map(|b| b.2).max().unwrap_or(words.len()) + SPINE_PAD).min(words.len());
-    let shown: Vec<(usize, String)> = (lo..hi).map(|i| (i, words[i].to_string())).collect();
+    // Laid out from every phrase of the ayah, not only the bars drawn, so the row stays put when another bar is picked.
+    let all: Vec<(usize, usize)> = d.family_of[ayah].iter().map(|&f| d.span_in(f, ayah)).collect();
+    let open: Vec<usize> = opened().iter().filter(|o| o.0 == ayah).map(|o| o.1).collect();
     let total = words.len();
+    let (lo, hi, cells) = row(&all, total, &open);
+    let bars: Vec<(usize, usize, usize, usize)> = bars
+        .into_iter()
+        .filter_map(|(f, s, e, layer)| Some((f, column(&cells, s)?, column(&cells, e - 1)? + 1, layer)))
+        .collect();
+    // (key, grid column, class, text, tip, the fold it opens or closes)
+    let shown: Vec<(String, usize, &str, String, Option<String>, Option<usize>)> = cells
+        .into_iter()
+        .enumerate()
+        .map(|(n, c)| match c {
+            Cell::Word(i) => {
+                let tip = spellings.get(&i).map(|f| written_tip(f));
+                (format!("w{i}"), n + 1, if tip.is_some() { "sw odd" } else { "sw" }, words[i].to_string(), tip, None)
+            }
+            Cell::Fold(s, e) => (format!("f{s}"), n + 1, "sfold", "…".to_string(), Some(format!("Show {}", plural(e - s, "more word"))), Some(s)),
+            Cell::Unfold(s) => (format!("u{s}"), n + 1, "sfold", "‹".to_string(), Some("Fold these words again".to_string()), Some(s)),
+        })
+        .collect();
+    let columns = shown.len();
 
     rsx! {
         div { class: "spine-wrap",
@@ -71,28 +119,33 @@ pub fn Spine(data: Shared, ayah: usize, root: Signal<Option<usize>>) -> Element 
                 }
                 span { " · {plural(d.family_of[ayah].len(), \"shared phrase\")}" }
                 if bars.len() > 1 { span { class: "hint", " · tap a bar to branch from that phrase" } }
-                button {
-                    class: if drill() { "drill on" } else { "drill" },
-                    "data-tip": "Self-test: hide what follows the phrase, tap to reveal",
-                    onclick: move |_| {
-                        let next = !drill();
-                        drill.set(next);
-                        save_drill(next);
-                    },
-                    "اختبار"
-                }
             }
             div { class: "spine", dir: "rtl",
                 if lo > 0 { span { class: "ellipsis", "…" } }
-                div { class: "spine-grid", style: "grid-template-columns: repeat({hi - lo}, auto)",
-                    for (i, w) in shown {
-                        span { key: "w{i}", class: "sw", style: "grid-row:1;grid-column:{i - lo + 1}", "{w}" }
+                div { class: "spine-grid", style: "grid-template-columns: repeat({columns}, auto)",
+                    for (key, col, class, w, tip, fold) in shown {
+                        span {
+                            key: "{key}",
+                            class,
+                            "data-tip": tip,
+                            style: "grid-row:1;grid-column:{col}",
+                            onclick: move |_| {
+                                if let Some(s) = fold {
+                                    let mut list = opened.write();
+                                    match list.iter().position(|&o| o == (ayah, s)) {
+                                        Some(n) => _ = list.remove(n),
+                                        None => list.push((ayah, s)),
+                                    }
+                                }
+                            },
+                            "{w}"
+                        }
                     }
                     for (f, s, e, layer) in bars {
                         div {
                             key: "f{f}",
                             class: if current == Some(f) { "sbar on" } else { "sbar" },
-                            style: "grid-row:{layer + 2};grid-column:{s - lo + 1} / {e - lo + 1}",
+                            style: "grid-row:{layer + 2};grid-column:{s} / {e}",
                             "data-tip": "{d.phrase(f)} · {plural(d.families[f].members.len(), \"ayah\")}",
                             onclick: {
                                 let d = d.clone();

@@ -29,13 +29,35 @@ pub enum Focus {
     Hizb(usize),
 }
 
-const LAYOUT_KEY: &str = "quran-timeline:layout";
+const LINES_KEY: &str = "quran-timeline:lines";
+const MANZIL_KEY: &str = "quran-timeline:show-manzil";
+const SAJDAH_KEY: &str = "quran-timeline:show-sajdah";
+
+pub const SCROLLBARS: &str = include_str!("../assets/scrollbars.css");
+
+/// Whether manzil and sajdah marks are drawn (the View menu), read anywhere a mark is drawn.
+pub static SHOW_MANZIL: GlobalSignal<bool> = Signal::global(|| progress::load(MANZIL_KEY).as_deref() != Some("0"));
+pub static SHOW_SAJDAH: GlobalSignal<bool> = Signal::global(|| progress::load(SAJDAH_KEY).as_deref() != Some("0"));
+
+/// "a, b or c" over what can be picked on the timeline: surahs, juz, hizb where its row is shown, and sajdah while shown.
+fn pickable(hizb: bool, sajdah: &str) -> String {
+    let mut items = vec!["surah", "juz"];
+    if hizb {
+        items.push("hizb");
+    }
+    if SHOW_SAJDAH() {
+        items.push(sajdah);
+    }
+    let last = items.pop().unwrap_or_default();
+    format!("{} or {last}", items.join(", "))
+}
 /// The line shown when 3-line mode is folded to one; empty when unfolded.
 const FOLD_KEY: &str = "quran-timeline:fold";
 
 #[component]
 pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(default = VNode::empty())] extra: Element) -> Element {
-    let mut layout = use_signal(|| if progress::load(LAYOUT_KEY).as_deref() == Some("full") { Layout::Full } else { Layout::Three });
+    let mut layout = use_signal(|| if progress::load(LINES_KEY).as_deref() == Some("3") { Layout::Three } else { Layout::Full });
+    let mut menu_open = use_signal(|| false);
     let focus = use_signal(|| None::<Focus>);
     let selected = use_signal(hash::read_focus);
     use_effect(move || hash::write_focus(selected()));
@@ -52,7 +74,9 @@ pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(de
     let mut collapsed = use_signal(|| saved_fold.is_some());
     let mut line = use_signal(|| saved_fold.unwrap_or(0));
     use_effect(move || {
-        progress::store(LAYOUT_KEY, if layout() == Layout::Full { "full" } else { "three" });
+        progress::store(LINES_KEY, if layout() == Layout::Full { "1" } else { "3" });
+        progress::store(MANZIL_KEY, if SHOW_MANZIL() { "1" } else { "0" });
+        progress::store(SAJDAH_KEY, if SHOW_SAJDAH() { "1" } else { "0" });
         progress::store(FOLD_KEY, &if collapsed() { line().to_string() } else { String::new() });
     });
     const LINES: [(usize, usize); 3] = [(0, 10), (10, 20), (20, 30)];
@@ -98,13 +122,39 @@ pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(de
     };
     rsx! {
         style { {include_str!("../assets/main.css")} }
+        style { {SCROLLBARS} }
         main { dir: "rtl",
             header {
                 {title}
-                search::Search { selected }
-                div { class: "toggle", dir: "ltr",
-                    button { class: if layout() == Layout::Full { "on" }, onclick: move |_| layout.set(Layout::Full), "Full 1–30" }
-                    button { class: if layout() == Layout::Three { "on" }, onclick: move |_| layout.set(Layout::Three), "3 lines × 10 juz" }
+                search::Search { selected, hizb, placeholder: format!("Search {}", pickable(hizb, "sajdah")) }
+                div { class: "viewmenu", dir: "ltr",
+                    button { class: if menu_open() { "vm-btn on" } else { "vm-btn" }, "aria-label": "View options", "data-tip": "View options", onclick: move |_| menu_open.toggle(), "⋮" }
+                    if menu_open() {
+                        div { class: "vm-backdrop", onclick: move |_| menu_open.set(false) }
+                        div { class: "vm-list",
+                            button {
+                                onclick: move |_| {
+                                    if three {
+                                        layout.set(Layout::Full);
+                                    } else {
+                                        layout.set(Layout::Three);
+                                        collapsed.set(false);
+                                    }
+                                    menu_open.set(false);
+                                },
+                                span { class: "tick" }
+                                if three { "Show 1 line" } else { "Separate into 3 lines" }
+                            }
+                            button { onclick: move |_| { let v = !SHOW_MANZIL(); *SHOW_MANZIL.write() = v; },
+                                span { class: "tick", if SHOW_MANZIL() { "✓" } }
+                                "Show manzil"
+                            }
+                            button { onclick: move |_| { let v = !SHOW_SAJDAH(); *SHOW_SAJDAH.write() = v; },
+                                span { class: "tick", if SHOW_SAJDAH() { "✓" } }
+                                "Show sajdah"
+                            }
+                        }
+                    }
                 }
             }
             for &(a, b) in rows {
@@ -128,7 +178,7 @@ pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(de
                     }
                 }
             }
-            Detail { focus, selected, ruku, extra }
+            Detail { focus, selected, ruku, hizb, extra }
             menu::ContextMenu {}
         }
     }
@@ -148,13 +198,13 @@ fn juz_of(pos: f32) -> usize {
 }
 
 #[component]
-fn Info(focus: Option<Focus>, selected: bool) -> Element {
+fn Info(focus: Option<Focus>, selected: bool, hizb: bool) -> Element {
     let m = &*MUSHAF;
     let text = match focus {
         None => {
             return rsx! {
                 p { class: "info msg",
-                    span { class: "idle", "Hover a surah, juz or sajdah mark. Click or tap to see details here." }
+                    span { class: "idle", "Hover a {pickable(hizb, \"sajdah mark\")}. Click or tap to see details here." }
                     span { class: "hov", "Click or tap to see details here." }
                 }
             };
@@ -211,7 +261,7 @@ fn Actions() -> Element {
 }
 
 #[component]
-fn Detail(focus: Signal<Option<Focus>>, selected: Signal<Option<Focus>>, ruku: bool, extra: Element) -> Element {
+fn Detail(focus: Signal<Option<Focus>>, selected: Signal<Option<Focus>>, ruku: bool, hizb: bool, extra: Element) -> Element {
     let range = selected().map(|f| match f {
         Focus::Sajdah(i) => span_of(Focus::Surah(MUSHAF.sajdah[i].surah as usize - 1)),
         _ => span_of(f),
@@ -219,7 +269,7 @@ fn Detail(focus: Signal<Option<Focus>>, selected: Signal<Option<Focus>>, ruku: b
     rsx! {
         section {
             class: format!("detail{}{}", if range.is_some() { " on" } else { "" }, if focus().is_some() { " hovering" } else { "" }),
-            Info { focus: selected(), selected: selected().is_some() }
+            Info { focus: selected(), selected: selected().is_some(), hizb }
             for (lo, hi) in range {
                 Track { key: "{lo}-{hi}", lo, hi, focus, selected, detail: true, ruku }
             }

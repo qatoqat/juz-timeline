@@ -16,6 +16,8 @@ pub const EPS: f32 = 1e-3;
 enum Line {
     Edge,
     Mid,
+    /// The start of juz 1 or the end of juz 30: one line through every row.
+    End,
 }
 
 fn overlaps(a: (f32, f32), b: (f32, f32)) -> bool {
@@ -91,7 +93,12 @@ fn line_style(px: f32) -> String {
 }
 
 fn line_class(kind: Line, dotted: bool) -> String {
-    format!("line {}{}", if kind == Line::Edge { "edge" } else { "mid" }, if dotted { " dotted" } else { "" })
+    let kind = match kind {
+        Line::Edge => "edge",
+        Line::Mid => "mid",
+        Line::End => "edge end",
+    };
+    format!("line {kind}{}", if dotted { " dotted" } else { "" })
 }
 
 fn cell_class(base: &str, even: bool, lit: Lit, sel: bool) -> String {
@@ -132,6 +139,7 @@ pub fn Track(
     let m = &*MUSHAF;
     let w = width();
     let mid = line_mid(lo, hi, detail);
+    let (show_manzil, show_sajdah) = (crate::SHOW_MANZIL(), crate::SHOW_SAJDAH());
     let picked_page = try_use_context::<crate::overlay::Overlay>().and_then(|o| (o.picked)()).map(|k| crate::progress::page_at(crate::overlay::ayah_pos(k)));
     let x = move |p: f32| to_pct(p, lo, hi, mid);
     let inside = move |p: f32| p >= lo - EPS && p <= hi + EPS;
@@ -175,7 +183,14 @@ pub fn Track(
         .chain(fixed.into_iter().chain(mids).filter(|&(p, _)| p > lo + EPS && p < hi - EPS))
         .map(|(p, kind)| {
             // The ends of juz 10 and 20 take the juz-line colour like juz 5, 15 and 25.
-            let kind = if [m.juz[9].end, m.juz[19].end].iter().any(|&q| (q - p).abs() < EPS) { Line::Mid } else { kind };
+            let near = |qs: [f32; 2]| qs.iter().any(|&q| (q - p).abs() < EPS);
+            let kind = if near([m.juz[9].end, m.juz[19].end]) {
+                Line::Mid
+            } else if near([m.juz[0].start, m.juz[29].end]) {
+                Line::End
+            } else {
+                kind
+            };
             let s_split = splits(m.surahs.iter().map(|s| (s.start, s.end)), p);
             let j_split = splits(m.juz.iter().map(|j| (j.start, j.end)), p);
             (line_style(x(p)), kind, s_split, j_split)
@@ -183,6 +198,7 @@ pub fn Track(
         .collect();
     let manzil_lines: Vec<String> = MANZIL
         .iter()
+        .filter(|_| show_manzil)
         .map(|&(s, _)| m.surahs[s as usize - 1].start)
         .filter(|&p| p > lo + EPS && p < hi - EPS)
         .map(|p| line_style(x(p)))
@@ -191,6 +207,7 @@ pub fn Track(
     let manzil_marks = |starts: Vec<f32>| -> Vec<(String, bool)> {
         MANZIL
             .iter()
+            .filter(|_| show_manzil)
             .map(|&(s, _)| m.surahs[s as usize - 1].start)
             .filter(|&p| p > lo + EPS && p < hi - EPS)
             .map(|p| (line_style(x(p)), !starts.iter().any(|&q| (q - p).abs() < EPS)))
@@ -205,14 +222,14 @@ pub fn Track(
         .sajdah
         .iter()
         .enumerate()
-        .filter(|(_, s)| !ayah_row && inside(s.pos))
+        .filter(|(_, s)| show_sajdah && !ayah_row && inside(s.pos))
         .map(|(i, s)| (i, x(s.pos)))
         .collect();
     let manzil: Vec<(usize, char, f32)> = MANZIL
         .iter()
         .enumerate()
         .map(|(n, &(s, c))| (n, c, m.surahs[s as usize - 1].start))
-        .filter(|&(_, _, p)| p >= lo - EPS && p < hi - EPS)
+        .filter(|&(_, _, p)| show_manzil && p >= lo - EPS && p < hi - EPS)
         .map(|(n, c, p)| (n, c, x(p)))
         .collect();
     let rukus: Vec<(usize, f32)> = m

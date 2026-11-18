@@ -16,13 +16,19 @@
 body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 system-ui, "Noto Naskh Arabic", sans-serif; }
 main { max-width: 1400px; margin: 0 auto; padding: 24px 32px 40px; }
 header { display: grid; grid-template-columns: minmax(max-content, 1fr) minmax(160px, 340px) minmax(max-content, 1fr); align-items: center; gap: 16px; margin-bottom: 26px; }
-header .toggle { justify-self: end; }
+header .viewmenu { justify-self: end; }
 h1 { white-space: nowrap; }
 h1 { font-size: 26px; font-weight: 500; margin: 0; }
 h1 .sub { font-size: 14px; color: var(--muted); margin-inline-start: 12px; }
-.toggle { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.toggle button { white-space: nowrap; border: 0; background: transparent; color: var(--ink); padding: 7px 14px; font: inherit; cursor: pointer; }
-.toggle button.on { background: var(--ink); color: var(--bg); }
+.viewmenu { position: relative; }
+.vm-btn { width: 34px; height: 34px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-size: 22px; line-height: 1; cursor: pointer; }
+.vm-btn:hover, .vm-btn.on { background: color-mix(in srgb, var(--line) 60%, transparent); }
+.vm-backdrop { position: fixed; inset: 0; z-index: 29; }
+.vm-list { position: absolute; left: 0; top: calc(100% + 4px); z-index: 30; display: flex; flex-direction: column; min-width: 210px; padding: 4px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); }
+.vm-list button { display: flex; align-items: center; gap: 6px; text-align: left; white-space: nowrap; border: 0; border-radius: 6px; background: transparent; color: var(--ink); padding: 6px 10px; font: inherit; cursor: pointer; }
+.vm-list button:hover { background: color-mix(in srgb, var(--line) 60%, transparent); }
+.vm-list .tick { width: 1.1em; color: var(--soft); }
 .fold { display: flex; justify-content: center; margin: -3px 0 6px; }
 .fold button { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 18px; line-height: 1; padding: 2px 6px; cursor: pointer; }
 .fold button span { display: inline-block; transform: rotate(90deg); }
@@ -31,8 +37,7 @@ h1 .sub { font-size: 14px; color: var(--muted); margin-inline-start: 12px; }
 .lines-nav { display: flex; align-items: center; gap: 4px; transform: translateY(-50%); color: var(--ink); font-size: 13px; white-space: nowrap; }
 .lines-nav button { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 18px; line-height: 1; padding: 0 6px; cursor: pointer; }
 .lines-nav button.gone { visibility: hidden; }
-.scroller { overflow-x: auto; overflow-y: hidden; direction: ltr; margin: 0 -8px 6px; padding: 0 8px 4px;
-  scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.scroller { overflow-x: auto; overflow-y: hidden; direction: ltr; margin: 0 -8px 6px; padding: 0 8px 4px; }
 .row { position: relative; direction: rtl; width: 100%; min-width: 100%; }
 .lane, .bar { position: relative; }
 .lane > *, .bar > * { position: absolute; }
@@ -42,8 +47,12 @@ h1 .sub { font-size: 14px; color: var(--muted); margin-inline-start: 12px; }
   display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--ink); }
 .surah.even { background-color: var(--sur-b); }
 .line { top: 0; bottom: 0; width: 0; border-left: 2px solid var(--edge); pointer-events: none; z-index: 1; }
-.line.mid { border-left-color: color-mix(in srgb, var(--juz-on-a) 80%, transparent); }
-.line.manzil { border-left-color: color-mix(in srgb, var(--sur-on-a) 80%, transparent); }
+/* the Quran's first and last edge run unbroken through the rows: each segment reaches up over the gap above its bar */
+.line.end { z-index: 2; }
+.bar:not(.surahs) > .line.end { top: -3px; }
+.bar.hizbs > .line.end { top: -2px; }
+.line.mid { border-left-color: color-mix(in srgb, var(--juz-on-a) 70%, transparent); }
+.line.manzil { border-left-color: color-mix(in srgb, var(--sur-on-a) 70%, transparent); }
 .line.dotted { border-left-style: dotted; }
 .juz { top: 0; height: 100%; background-color: var(--juz-a); display: flex; align-items: center; justify-content: center;
   font-size: 12px; color: var(--soft); border-inline-start: 1px solid var(--bg); }
@@ -86,7 +95,7 @@ h1 .sub { font-size: 14px; color: var(--muted); margin-inline-start: 12px; }
 .rubc { top: 0; height: 100%; background-color: var(--rub-a); display: flex; align-items: center; justify-content: center;
   font-size: 12px; color: var(--soft); white-space: nowrap; overflow: hidden; direction: ltr; }
 .rubc.even { background-color: var(--rub-b); }
-.line.rl { border-left-color: color-mix(in srgb, var(--sj) 80%, transparent); }
+.line.rl { border-left-color: color-mix(in srgb, var(--sj) 70%, transparent); }
 .rubc .hz { position: absolute; right: 8px; color: var(--ink); }
 .mz { color: var(--ink); font-size: 13px; line-height: 20px; font-weight: 500; cursor: default; }
 .tip { text-align: left; position: fixed; left: 0; top: 0; z-index: 10; pointer-events: none; max-width: 340px; padding: 5px 9px;
@@ -171,7 +180,6 @@ h1 > a { direction: ltr; }
 .theme.l3 { background-color: color-mix(in srgb, var(--sj) 56%, var(--juz-a)); color: var(--ink); }
 .theme.l4 { background-color: color-mix(in srgb, var(--sj) 78%, var(--juz-a)); color: var(--bg); }
 .theme.l1.on, .theme.l2.on, .theme.l3.on, .theme.l4.on { background-color: var(--juz-on-a); color: var(--on-ink); }
-.theme .slip { position: absolute; top: 3px; left: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--bm); pointer-events: none; }
 .arcs { margin-top: 2px; }
 .arcs svg { display: block; width: 100%; height: 84px; overflow: visible; }
 .arc path { fill: none; vector-effect: non-scaling-stroke; }

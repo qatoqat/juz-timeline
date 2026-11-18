@@ -1,0 +1,10 @@
+/* Chromium ignores these pseudo-elements on any element with scrollbar-width/-color set, so the standard properties are only the fallback. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-button { display: none; }
+::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 6px; background-clip: padding-box; background-color: color-mix(in srgb, var(--muted) 45%, transparent); }
+::-webkit-scrollbar-thumb:hover { background-color: var(--muted); }
+::-webkit-scrollbar-thumb:active { background-color: var(--soft); }
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent; }
+}

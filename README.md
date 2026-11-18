@@ -9,7 +9,7 @@ Live: https://qatoqat.com/juz-timeline/ · Explore: https://qatoqat.com/juz-time
 - `core` — shared mushaf data (surah, juz, page, rub', sajdah, manzil) and positions.
 - `ui` — the timeline component: rows, detail panel, search, bookmarks, done marks.
 - `timeline` — the timeline page, kept lightweight.
-- `explore` — relation pages (similar ayah: repeated phrases, i.e. mutashabihat; ayah themes; concepts), each built on the timeline; Similar ayah adds a hizb row under the juz row.
+- `explore` — relation pages (similar ayah: repeated phrases, i.e. mutashabihat; ayah themes with their relations), each built on the timeline; Similar ayah adds a hizb row under the juz row.
 
 Each page builds its own WebAssembly, so the explore page never adds weight to the timeline.
 
@@ -22,6 +22,7 @@ rustup target add wasm32-unknown-unknown
 cargo install wasm-bindgen-cli --version 0.2.130
 tools/rebuild_data.sh # sync Quran data (needs credentials, see Data)
 ./build.sh            # dist/ (timeline) and dist/explore/
+cargo test -p quran-explore  # renders every Similar ayah view; fails on any panic
 python -m http.server -d dist
 ```
 
@@ -30,13 +31,13 @@ python -m http.server -d dist
 All Quran data comes from **Quran Foundation Content Sync** (the quran.com content API), under the [developer terms](https://api-docs.quran.foundation/legal/developer-terms/):
 
 - `tools/sync_qf.py` downloads fresh snapshots of `quran_core:1` (Imla'i text, juz, hizb, rub', ruku', manzil, sajdah) and `mushafs:1` (QCF V2, the King Fahd Complex **1441 AH** print, for page and line numbers). It needs a confidential client with `content.quran.read` and `content.sync.read`: set `QF_CLIENT_ID` / `QF_CLIENT_SECRET`, or put `CLIENT_ID=` / `CLIENT_SECRET=` lines in `~/.config/juz-timeline/quran_foundation_credentials.txt`.
-- `tools/rebuild_data.sh` syncs, regenerates `core/src/data.rs` and the Explore assets (`similar.json`, `themes.json`, `topics.json`, `topic-ayat.json`, `relations.json`), then runs `tools/check_data.py`, which fails on any overlap, gap, ruku' crossing, stale generated code or bad reference. `--cached` skips the sync.
+- `tools/rebuild_data.sh` syncs, regenerates `core/src/data.rs` and the Explore assets (`similar.json`, `themes.json`, `topics.json`, `relations.json`), then runs `tools/check_data.py`, which fails on any overlap, gap, ruku' crossing, stale generated code or bad reference. `--cached` skips the sync.
 - The generated files are not committed. `.github/workflows/pages.yml` syncs and regenerates them on every deploy and on a twice-weekly schedule, with the credentials stored as repository secrets, so no copy is older than the terms' 7 days. A failed check stops the deploy; data that differs from the last deploy (`tools/fingerprint.py`, hashes and counts in `tools/data.lock.json`) opens an issue. If the deployed data passes 7 days old (failed syncs), the app shows a dismissible warning at the top until the next successful deploy.
 - The Quran text is shown as delivered (waqf signs kept); only matching uses a normalised copy.
 - Sajdah: quran.com lists 14; 22:77, which the Madani mushaf marks and the Shafi'i and Hanbali schools count, is added and flagged (white symbol, note in its menu).
-- Similar ayah: `tools/similar.py` finds shared phrases of 3+ words in 2–12 ayat plus close variants aligned word by word. Large families are drawn as a two-sided right-to-left word tree (after the DoubleTree design by Culy & Lyding), small ones as aligned cards.
+- Similar ayah: `tools/similar.py` finds shared phrases of 3+ words in 2–12 ayat plus close variants aligned word by word. An ayah is left out of a phrase when two or more others open with it and it alone has it mid-ayah, after 12+ words of its own, sharing at most 5 words with them and with 5+ of its own still to come (41:15's «أَوَلَمْ يَرَوْا أَنَّ اللَّهَ»); phrases that end an ayah always count. Large families are drawn as a two-sided right-to-left word tree (after the DoubleTree design by Culy & Lyding), small ones as aligned cards.
 - Ayah themes: the ruku' headings of Muhammad Farooq-i-Azam Malik's translation, as digitised in QUL's ayah-theme dataset ([qul.tarteel.ai](https://qul.tarteel.ai/resources/ayah-theme)), kept in `tools/data/`. `tools/themes.py` aligns them to quran.com's ruku' (splitting any theme that crosses one) and marks ayat without a theme with their opening words.
-- Concepts: the 284 concepts of the [Quranic Arabic Corpus](https://corpus.quran.com/ontology.jsp) ontology (GNU GPL), extracted from QUL's ayah-topics SQLite by `tools/ontology.py` into `tools/data/ontology.json` (QUL's thematic and general topics, from other sources, are left out). `tools/topics.py` maps them onto Content Sync ayat, keeps the corpus links between concepts and adds concepts that share ayat, and writes the ayah text the page loads on demand.
+- Concepts (an input to theme relations, not a page): the 284 concepts of the [Quranic Arabic Corpus](https://corpus.quran.com/ontology.jsp) ontology (GNU GPL), extracted from QUL's ayah-topics SQLite by `tools/ontology.py` into `tools/data/ontology.json` (QUL's thematic and general topics, from other sources, are left out). `tools/topics.py` maps them onto Content Sync ayat for `tools/relations.py`.
 - Theme relations (Ayah themes page): `tools/relations.py` links themes that are told or worded alike, each link with its Arabic evidence.
   - Cross-surah links fuse four signals per pair of themes: shared phrase families, shared corpus concepts, heading words and the passages' own words. A link needs two signals over their floors; links are typed story (a shared person or people), wording or subject, with weaker ones kept apart. Three ontology tags that name someone absent from the passage are ignored here only.
   - Look-alike passages (`tools/twins.py`): shared phrases in the same order on both sides, word-aligned, with each word flagged same, other vowels, و/ف only, or unmatched. The page draws them as a ladder: shared wording once, forks side by side, then what follows.
