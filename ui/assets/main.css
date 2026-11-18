@@ -26,7 +26,8 @@ h1 .sub { font-size: 14px; color: var(--muted); margin-inline-start: 12px; }
 .fold { display: flex; justify-content: center; margin: -3px 0 6px; }
 .fold button { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 18px; line-height: 1; padding: 2px 6px; cursor: pointer; }
 .fold button span { display: inline-block; transform: rotate(90deg); }
-.track-head { position: absolute; top: 6px; height: 0; transform: translateX(50%); z-index: 3; }
+.lane.head { height: 22px; }
+.track-head { top: 50%; height: 0; transform: translateX(50%); z-index: 3; }
 .lines-nav { display: flex; align-items: center; gap: 4px; transform: translateY(-50%); color: var(--ink); font-size: 13px; white-space: nowrap; }
 .lines-nav button { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 18px; line-height: 1; padding: 0 6px; cursor: pointer; }
 .lines-nav button.gone { visibility: hidden; }

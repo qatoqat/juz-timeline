@@ -118,6 +118,7 @@ pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(de
                     ruku: false,
                     hizb,
                     head: head.clone(),
+                    headed: three && collapsed(),
                 }
             }
             if three {
