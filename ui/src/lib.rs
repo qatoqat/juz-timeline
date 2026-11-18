@@ -95,13 +95,13 @@ pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(de
             if three {
                 div { class: "fold", dir: "ltr",
                     if collapsed() {
-                        button { disabled: line() == 0, "data-tip": "Previous 10 juz", onclick: move |_| line -= 1, "↑" }
+                        button { disabled: line() == 0, "data-tip": "Previous 10 juz", onclick: move |_| line -= 1, span { "‹" } }
                     }
                     button { "data-tip": if collapsed() { "Show all three lines" } else { "Show one line" }, onclick: fold,
-                        if collapsed() { "⇊" } else { "⇈" }
+                        span { if collapsed() { "»" } else { "«" } }
                     }
                     if collapsed() {
-                        button { disabled: line() == 2, "data-tip": "Next 10 juz", onclick: move |_| line += 1, "↓" }
+                        button { disabled: line() == 2, "data-tip": "Next 10 juz", onclick: move |_| line += 1, span { "›" } }
                     }
                 }
             }
