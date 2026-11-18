@@ -74,7 +74,13 @@ pub fn OverlayLane(lo: f32, hi: f32, detail: bool) -> Element {
     let picked = (overlay.picked)();
     let marked: Vec<AyahKey> = overlay.marks.read().iter().map(|s| s.key).collect();
     let hot = overlay.hot.read().clone();
-    let source: Vec<Spot> = if detail { overlay.dots.read().clone() } else { overlay.marks.read().clone() };
+    // On the overview a bookmarked page shows its bookmark, not the circle.
+    let booked: Vec<u16> = if detail { vec![] } else { try_use_context::<crate::progress::Progress>().map_or(vec![], |p| p.bookmarks.read().clone()) };
+    let source: Vec<Spot> = if detail {
+        overlay.dots.read().clone()
+    } else {
+        overlay.marks.read().iter().filter(|s| !booked.contains(&crate::progress::page_at(s.pos))).cloned().collect()
+    };
     let mut spots: Vec<(Spot, f32)> = source.into_iter().filter(|s| inside(s.pos)).map(|s| { let px = x(s.pos); (s, px) }).collect();
     spots.sort_by(|a, b| a.1.total_cmp(&b.1));
     let size = if detail { SPOT_MAX } else { 8.0 };

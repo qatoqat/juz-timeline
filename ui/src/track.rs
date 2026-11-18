@@ -131,6 +131,7 @@ pub fn Track(
     let m = &*MUSHAF;
     let w = width();
     let mid = line_mid(lo, hi, detail);
+    let picked_page = try_use_context::<crate::overlay::Overlay>().and_then(|o| (o.picked)()).map(|k| crate::progress::page_at(crate::overlay::ayah_pos(k)));
     let x = move |p: f32| to_pct(p, lo, hi, mid);
     let inside = move |p: f32| p >= lo - EPS && p <= hi + EPS;
     let (lit_s, lit_j) = lit(selected().or(focus()));
@@ -271,7 +272,7 @@ pub fn Track(
                     for (i, page, px, _) in bookmarks.iter().cloned() {
                         b {
                             key: "{i}",
-                            class: if i == active { "bm-handle active" } else { "bm-handle" },
+                            class: format!("bm-handle{}{}", if i == active { " active" } else { "" }, if Some(page) == picked_page { " picked" } else { "" }),
                             style: "right:{px}%",
                             "data-bm": "{i}",
                             "data-tip": "{bookmark_tip(page)}",
