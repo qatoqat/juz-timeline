@@ -184,6 +184,17 @@ pub fn Track(
         .filter(|&p| p > lo + EPS && p < hi - EPS)
         .map(|p| line_style(x(p)))
         .collect();
+    // A manzil that starts inside a juz (or hizb) shows there as a dotted line.
+    let manzil_inside = |starts: Vec<f32>| -> Vec<String> {
+        MANZIL
+            .iter()
+            .map(|&(s, _)| m.surahs[s as usize - 1].start)
+            .filter(|&p| p > lo + EPS && p < hi - EPS && !starts.iter().any(|&q| (q - p).abs() < EPS))
+            .map(|p| line_style(x(p)))
+            .collect()
+    };
+    let manzil_juz = manzil_inside(m.juz.iter().map(|j| j.start).collect());
+    let manzil_hizb = manzil_inside(m.rub.iter().step_by(4).map(|r| r.pos).collect());
 
     let has_overlay = try_use_context::<crate::overlay::Overlay>().is_some();
     let ayah_row = detail && has_overlay;
@@ -353,6 +364,9 @@ pub fn Track(
                 for (style, kind, _, split) in lines.iter().cloned() {
                     i { class: line_class(kind, split), style }
                 }
+                for style in manzil_juz {
+                    i { class: "line edge dotted", style }
+                }
             }
             if !hizbs.is_empty() {
                 div { class: "bar hizbs",
@@ -370,6 +384,9 @@ pub fn Track(
                     }
                     for (style, kind, _, split) in lines.iter().cloned() {
                         i { class: line_class(kind, split), style }
+                    }
+                    for style in manzil_hizb.iter().cloned() {
+                        i { class: "line edge dotted", style }
                     }
                 }
             }
