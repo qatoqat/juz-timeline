@@ -99,6 +99,8 @@ h1 .sub { font-size: 14px; color: var(--muted); margin-inline-start: 12px; }
 .edit.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .detail.on:has(.edit.on) .surah, .detail.on:has(.edit.on) .juz, .detail.on:has(.edit.on) .rubc { cursor: pointer; }
 .line.bm { border-left-color: var(--bm); z-index: 2; }
+.row > .bm-line { position: absolute; top: 18px; bottom: 0; }
+.lane.sajdah .sj, .lane.sajdah .rk, .lane.sajdah .mz { z-index: 3; }
 .bmk { height: 18px; cursor: ew-resize; touch-action: none; }
 .bm-handle { color: var(--bm); transform: translateX(50%); top: 2px; display: flex; cursor: grab; }
 body.dragging, body.dragging * { cursor: grabbing !important; user-select: none; }
@@ -129,7 +131,7 @@ h1 > * { unicode-bidi: isolate; }
 h1 > a { direction: ltr; }
 .rk { color: var(--soft); font-size: 12px; line-height: 20px; transform: translateX(50%); cursor: default; }
 .dots { height: 20px; }
-.marks { height: 14px; }
+.marks { height: 0; top: -9px; z-index: 3; }
 .spot { top: 50%; border-radius: 50%; border: 1.5px solid var(--sj); background: transparent; transform: translate(50%, -50%); cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; color: var(--bg); box-sizing: border-box; }
 .spot.w1 { background: color-mix(in srgb, var(--sj) 55%, transparent); }
 .spot.w2 { background: color-mix(in srgb, var(--sj) 78%, transparent); }

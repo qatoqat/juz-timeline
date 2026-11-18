@@ -81,8 +81,9 @@ if (!window.__timelineUi) {
     if (!best) return null;
     const r = best.getBoundingClientRect();
     const f = Math.min(1, Math.max(0, (r.right - e.clientX) / r.width));
-    const lo = +best.dataset.lo, hi = +best.dataset.hi;
-    return Math.min(lo + f * (hi - lo), hi - 0.001);
+    const lo = +best.dataset.lo, hi = +best.dataset.hi, mid = best.dataset.mid;
+    const p = mid === undefined ? lo + f * (hi - lo) : f <= 0.5 ? lo + f * 2 * (+mid - lo) : +mid + (f - 0.5) * 2 * (hi - +mid);
+    return Math.min(p, hi - 0.001);
   };
   let dragIndex = -1;
   const sendPos = (e) => { const p = posAt(e); if (p !== null) dioxus.send([dragIndex, p]); };

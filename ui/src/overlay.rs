@@ -68,7 +68,8 @@ pub fn OverlayLane(lo: f32, hi: f32, detail: bool) -> Element {
     let Some(overlay) = try_use_context::<Overlay>() else { return rsx! {} };
     let selection = use_context::<Selection>();
     let menu = use_context::<Signal<Option<Menu>>>();
-    let x = move |p: f32| (p - lo) / (hi - lo) * 100.0;
+    let mid = crate::track::line_mid(lo, hi, detail);
+    let x = move |p: f32| crate::track::to_pct(p, lo, hi, mid);
     let inside = move |p: f32| p >= lo - EPS && p < hi - EPS;
     let picked = (overlay.picked)();
     let marked: Vec<AyahKey> = overlay.marks.read().iter().map(|s| s.key).collect();

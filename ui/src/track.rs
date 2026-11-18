@@ -26,6 +26,23 @@ fn splits(spans: impl Iterator<Item = (f32, f32)>, p: f32) -> bool {
     spans.into_iter().any(|(a, b)| a < p - EPS && b > p + EPS)
 }
 
+/// The page that halves a 10-juz overview line (end of juz 5, 15 or 25); None elsewhere.
+pub fn line_mid(lo: f32, hi: f32, detail: bool) -> Option<f32> {
+    let m = &*MUSHAF;
+    let inside: Vec<f32> = [4, 14, 24].iter().map(|&k| m.juz[k].end).filter(|&p| p > lo + EPS && p < hi - EPS).collect();
+    (!detail && inside.len() == 1).then(|| inside[0])
+}
+
+/// Percent from the right edge. On a 10-juz line each half (juz 1–5, 6–10, …) fills half the width, so the middle
+/// line stays centred although the halves differ by a page or two.
+pub fn to_pct(p: f32, lo: f32, hi: f32, mid: Option<f32>) -> f32 {
+    match mid {
+        Some(m) if p <= m => (p - lo) / (m - lo) * 50.0,
+        Some(m) => 50.0 + (p - m) / (hi - m) * 50.0,
+        None => (p - lo) / (hi - lo) * 100.0,
+    }
+}
+
 pub fn span_of(f: Focus) -> (f32, f32) {
     let m = &*MUSHAF;
     match f {
@@ -113,7 +130,8 @@ pub fn Track(
     let mut width = use_signal(|| 1200.0f32);
     let m = &*MUSHAF;
     let w = width();
-    let x = move |p: f32| (p - lo) / (hi - lo) * 100.0;
+    let mid = line_mid(lo, hi, detail);
+    let x = move |p: f32| to_pct(p, lo, hi, mid);
     let inside = move |p: f32| p >= lo - EPS && p <= hi + EPS;
     let (lit_s, lit_j) = lit(selected().or(focus()));
     let sel = selected();
@@ -242,10 +260,26 @@ pub fn Track(
             class: if detail { "row" } else { "row main" },
             "data-lo": "{lo}",
             "data-hi": "{hi}",
+            "data-mid": mid.map(|m| m.to_string()),
             onresize: move |e| if let Ok(sz) = e.get_content_box_size() { width.set(sz.width as f32) },
             // `head` sits on the line that halves the track (end of juz 5, 15 or 25), wherever its pages put it.
             if let Some(mid) = mids.iter().map(|&(p, _)| p).find(|&p| p > lo + EPS && p < hi - EPS) {
                 div { class: "track-head", style: "right:{x(mid)}%", {head} }
+            }
+            if !detail {
+                div { class: "lane bmk",
+                    for (i, page, px, _) in bookmarks.iter().cloned() {
+                        b {
+                            key: "{i}",
+                            class: if i == active { "bm-handle active" } else { "bm-handle" },
+                            style: "right:{px}%",
+                            "data-bm": "{i}",
+                            "data-tip": "{bookmark_tip(page)}",
+                            oncontextmenu: move |e| open_menu(menu, &e, Target::Bookmark(i)),
+                            Bookmark {}
+                        }
+                    }
+                }
             }
             if !detail {
                 OverlayLane { lo, hi, detail: false }
@@ -253,9 +287,6 @@ pub fn Track(
             div { class: "lane sajdah",
                 for (style, thick) in ticks {
                     i { class: if thick { "bm-tick thick" } else { "bm-tick" }, style }
-                }
-                for (_, _, _, style) in bookmarks.iter().cloned() {
-                    i { class: "line bm", style }
                 }
                 for &(i, px) in sajdah.iter() {
                     b {
@@ -283,21 +314,6 @@ pub fn Track(
                     }
                 }
             }
-            if !detail {
-                div { class: "lane bmk",
-                    for (i, page, px, _) in bookmarks.iter().cloned() {
-                        b {
-                            key: "{i}",
-                            class: if i == active { "bm-handle active" } else { "bm-handle" },
-                            style: "right:{px}%",
-                            "data-bm": "{i}",
-                            "data-tip": "{bookmark_tip(page)}",
-                            oncontextmenu: move |e| open_menu(menu, &e, Target::Bookmark(i)),
-                            Bookmark {}
-                        }
-                    }
-                }
-            }
             div { class: "bar surahs",
                 for (i, a, sw) in surahs {
                     div {
@@ -318,9 +334,6 @@ pub fn Track(
                 for style in manzil_lines {
                     i { class: "line edge", style }
                 }
-                for (_, _, _, style) in bookmarks.iter().cloned() {
-                    i { class: "line bm", style }
-                }
             }
             div { class: "bar",
                 for (i, a, jw) in juz {
@@ -338,9 +351,6 @@ pub fn Track(
                 }
                 for (style, kind, _, split) in lines.iter().cloned() {
                     i { class: line_class(kind, split), style }
-                }
-                for (_, _, _, style) in bookmarks.iter().cloned() {
-                    i { class: "line bm", style }
                 }
             }
             if !hizbs.is_empty() {
@@ -360,10 +370,10 @@ pub fn Track(
                     for (style, kind, _, split) in lines.iter().cloned() {
                         i { class: line_class(kind, split), style }
                     }
-                    for (_, _, _, style) in bookmarks.iter().cloned() {
-                        i { class: "line bm", style }
-                    }
                 }
+            }
+            for (_, _, _, style) in bookmarks.iter().cloned() {
+                i { class: "line bm bm-line", style }
             }
             if detail {
                 div { class: "bar rubs",
