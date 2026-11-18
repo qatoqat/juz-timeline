@@ -174,6 +174,8 @@ pub fn Track(
         .into_iter()
         .chain(fixed.into_iter().chain(mids).filter(|&(p, _)| p > lo + EPS && p < hi - EPS))
         .map(|(p, kind)| {
+            // The ends of juz 10 and 20 take the juz-line colour like juz 5, 15 and 25.
+            let kind = if [m.juz[9].end, m.juz[19].end].iter().any(|&q| (q - p).abs() < EPS) { Line::Mid } else { kind };
             let s_split = splits(m.surahs.iter().map(|s| (s.start, s.end)), p);
             let j_split = splits(m.juz.iter().map(|j| (j.start, j.end)), p);
             (line_style(x(p)), kind, s_split, j_split)
