@@ -29,7 +29,7 @@ pub enum Focus {
 }
 
 #[component]
-pub fn Page(title: Element, ruku: bool, #[props(default = VNode::empty())] extra: Element) -> Element {
+pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(default = VNode::empty())] extra: Element) -> Element {
     let mut layout = use_signal(|| Layout::Three);
     let focus = use_signal(|| None::<Focus>);
     let selected = use_signal(hash::read_focus);
@@ -67,6 +67,7 @@ pub fn Page(title: Element, ruku: bool, #[props(default = VNode::empty())] extra
                     selected,
                     detail: false,
                     ruku: false,
+                    hizb,
                 }
             }
             Detail { focus, selected, ruku, extra }

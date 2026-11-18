@@ -1,6 +1,6 @@
 use crate::data::MANZIL;
 use crate::model::Rub;
-use crate::labels::{bookmark_tip, ruku_tip, fmt_len, juz_tip, rub_tip, sajdah_tip, surah_label, Bookmark, Dome, DIGIT_PX, LABEL_PAD_PX};
+use crate::labels::{bookmark_tip, fmt_len, hizb_tip, juz_tip, rub_tip, ruku_tip, sajdah_tip, surah_label, Bookmark, Dome, DIGIT_PX, LABEL_PAD_PX};
 use crate::menu::{open_menu, Menu, Target};
 use crate::overlay::OverlayLane;
 use crate::progress::{Mark, Progress};
@@ -8,6 +8,8 @@ use crate::{tip, Focus, MUSHAF};
 use dioxus::prelude::*;
 
 const MARK_GAP_PX: f32 = 34.0;
+/// Room for a two-digit hizb number in the 10px label font.
+const HIZB_LABEL_PX: f32 = 15.0;
 pub const EPS: f32 = 1e-3;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -97,7 +99,15 @@ fn thin<T>(items: impl Iterator<Item = (T, f32)>, min_pct: f32) -> Vec<(T, f32, 
 }
 
 #[component]
-pub fn Track(lo: f32, hi: f32, focus: Signal<Option<Focus>>, selected: Signal<Option<Focus>>, detail: bool, ruku: bool) -> Element {
+pub fn Track(
+    lo: f32,
+    hi: f32,
+    focus: Signal<Option<Focus>>,
+    selected: Signal<Option<Focus>>,
+    detail: bool,
+    ruku: bool,
+    #[props(default)] hizb: bool,
+) -> Element {
     let mut width = use_signal(|| 1200.0f32);
     let m = &*MUSHAF;
     let w = width();
@@ -120,6 +130,15 @@ pub fn Track(lo: f32, hi: f32, focus: Signal<Option<Focus>>, selected: Signal<Op
         .filter(|(_, j)| overlaps((j.start, j.end), (lo, hi)))
         .map(|(i, j)| (i, x(j.start.max(lo)), x(j.end.min(hi)) - x(j.start.max(lo))))
         .collect();
+
+    let hizbs: Vec<(usize, f32, f32)> = (0..m.rub.len() / 4)
+        .filter(|_| hizb && !detail)
+        .map(|h| (h, m.rub[4 * h].pos, m.rub[4 * h + 3].end))
+        .filter(|&(_, s, e)| overlaps((s, e), (lo, hi)))
+        .map(|(h, s, e)| (h, x(s.max(lo)), x(e.min(hi)) - x(s.max(lo))))
+        .collect();
+    let narrowest = hizbs.iter().map(|c| c.2).fold(f32::INFINITY, f32::min) * w / 100.0;
+    let hizb_every = if narrowest >= HIZB_LABEL_PX { 1 } else if 2.0 * narrowest >= HIZB_LABEL_PX { 2 } else { 0 };
 
     let fixed = [m.juz[0].start, m.juz[9].end, m.juz[19].end, m.juz[29].end].map(|p| (p, Line::Edge));
     let mids = [4, 14, 24].map(|k| (m.juz[k].end, Line::Mid));
@@ -310,6 +329,25 @@ pub fn Track(lo: f32, hi: f32, focus: Signal<Option<Focus>>, selected: Signal<Op
                 }
                 for (_, _, _, style) in bookmarks.iter().cloned() {
                     i { class: "line bm", style }
+                }
+            }
+            if !hizbs.is_empty() {
+                div { class: "bar hizbs",
+                    for (h, a, hw) in hizbs {
+                        div {
+                            key: "{h}",
+                            class: if h % 2 == 1 { "hizbc even" } else { "hizbc" },
+                            style: "right:{a}%;width:{hw}%",
+                            "data-tip": "{hizb_tip(h)}",
+                            if hizb_every > 0 && h % hizb_every == 0 { span { class: "lbl", "{h + 1}" } }
+                        }
+                    }
+                    for (style, kind, _, split) in lines.iter().cloned() {
+                        i { class: line_class(kind, split), style }
+                    }
+                    for (_, _, _, style) in bookmarks.iter().cloned() {
+                        i { class: "line bm", style }
+                    }
                 }
             }
             if detail {

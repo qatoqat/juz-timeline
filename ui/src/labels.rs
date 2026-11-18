@@ -41,6 +41,16 @@ pub fn rub_tip(i: usize) -> String {
     )
 }
 
+/// Hizb `h` (0-based) spans rub' 4h to 4h + 3.
+pub fn hizb_tip(h: usize) -> String {
+    let (first, last) = (&MUSHAF.rub[4 * h], &MUSHAF.rub[4 * h + 3]);
+    let half = if h % 2 == 0 { "first" } else { "second" };
+    format!(
+        "Hizb {} · {half} half of Juz {} · from {}:{} · pages {}–{}",
+        h + 1, h / 2 + 1, first.from.0, first.from.1, first.pos.floor() as u32 + 1, (last.end - EPS).ceil() as u32
+    )
+}
+
 pub fn ruku_tip(i: usize) -> String {
     let r = &MUSHAF.ruku[i];
     format!("Ruku' {} · {}:{} · page {}", i + 1, r.surah, r.ayah, r.pos.floor() as u32 + 1)

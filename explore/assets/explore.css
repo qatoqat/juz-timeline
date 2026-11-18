@@ -22,7 +22,6 @@ a:hover { text-decoration: underline; }
 .scope { display: inline-block; margin-right: 6px; padding: 0 6px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; color: var(--soft); }
 .items li.ready { cursor: pointer; }
 .items li.ready:hover { border-color: var(--soft); }
-.items li.soon { opacity: 0.6; }
 .foot { display: flex; align-items: center; justify-content: space-between; }
 .source { font-size: 12px; }
 .tag { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; }

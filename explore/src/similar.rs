@@ -13,7 +13,7 @@ use quran_ui::MUSHAF;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-const QUL: &str = "https://qul.tarteel.ai/resources/similar-ayah";
+const SOURCE: &str = "https://quran.foundation";
 const FETCH: &str = r#"fetch("similar.json").then(r => r.text()).then(t => dioxus.send(t))"#;
 const SEARCH_LIMIT: usize = 12;
 const CHIP_WORDS: usize = 4;
@@ -124,12 +124,13 @@ pub fn SimilarAyah() -> Element {
         style { {include_str!("../assets/similar.css")} }
         quran_ui::Page {
             ruku: false,
+            hizb: true,
             title: rsx! {
                 h1 {
                     "آيات متشابهة"
                     span { class: "sub", "Similar ayah" }
                     a { class: "explore", href: "../", "Explore" }
-                    a { class: "explore", href: "{QUL}", target: "_blank", rel: "noopener", "Source ↗" }
+                    a { class: "explore", href: "{SOURCE}", target: "_blank", rel: "noopener", "data-tip": "Phrases computed from the Quran Foundation (quran.com) text", "Source ↗" }
                 }
             },
             extra: rsx! { Panel { data: data().map(Shared), root, pending } },

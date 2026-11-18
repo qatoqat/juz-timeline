@@ -9,7 +9,7 @@ Live: https://qatoqat.com/juz-timeline/ · Explore: https://qatoqat.com/juz-time
 - `core` — shared mushaf data (surah, juz, page, rub', sajdah, manzil) and positions.
 - `ui` — the timeline component: rows, detail panel, search, bookmarks, done marks.
 - `timeline` — the timeline page, kept lightweight.
-- `explore` — relation datasets (similar ayah, mutashabihat, themes, topics); each opens a page built on the timeline, with ruku' marks (ع) in the detail view.
+- `explore` — relation pages (similar ayah: repeated phrases, i.e. mutashabihat; ayah themes; concepts), each built on the timeline; Similar ayah adds a hizb row under the juz row.
 
 Each page builds its own WebAssembly, so the explore page never adds weight to the timeline.
 

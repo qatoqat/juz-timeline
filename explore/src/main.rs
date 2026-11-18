@@ -36,15 +36,16 @@ struct Item {
     scope: &'static str,
     about: &'static str,
     slug: &'static str,
-    ready: bool,
+    source: &'static str,
     experimental: bool,
 }
 
-const RELATIONS: [Item; 4] = [
-    Item { name: "Mutashabihat", arabic: "متشابهات", count: "5,278", scope: "phrase ↔ phrase", about: "Repeated phrases with small wording differences.", slug: "mutashabihat", ready: false, experimental: false },
-    Item { name: "Similar ayah", arabic: "آيات متشابهة", count: "4,001", scope: "ayah ↔ ayah", about: "Ayat that match in meaning, context or wording, with a score.", slug: "similar-ayah", ready: true, experimental: false },
-    Item { name: "Ayah themes", arabic: "مواضيع الآيات", count: "1,049", scope: "ayah range", about: "Core theme of each group of ayat.", slug: "ayah-theme", ready: true, experimental: false },
-    Item { name: "Concepts", arabic: "المفاهيم", count: "284", scope: "concept ↔ concept", about: "Quranic Arabic Corpus concepts, the ayat they appear in, and how they relate.", slug: "ayah-topics", ready: true, experimental: true },
+const QF: &str = "https://quran.foundation";
+
+const RELATIONS: [Item; 3] = [
+    Item { name: "Similar ayah", arabic: "متشابهات", count: "4,072", scope: "phrase ↔ phrase", about: "Phrases repeated in 2–12 ayat, as word trees with the first word that differs, plus near-identical ayat.", slug: "similar-ayah", source: QF, experimental: false },
+    Item { name: "Ayah themes", arabic: "مواضيع الآيات", count: "1,049", scope: "ayah range", about: "Core theme of each group of ayat, and where each passage is told or worded alike.", slug: "ayah-theme", source: "https://qul.tarteel.ai/resources/ayah-theme", experimental: false },
+    Item { name: "Concepts", arabic: "المفاهيم", count: "284", scope: "concept ↔ concept", about: "Quranic Arabic Corpus concepts, the ayat they appear in, and how they relate.", slug: "ayah-topics", source: "https://qul.tarteel.ai/resources/ayah-topics", experimental: true },
 ];
 
 fn main() {
@@ -99,7 +100,7 @@ fn List() -> Element {
             section {
                 h2 { "Relations" }
                 p { class: "note",
-                    "Links between ayat, phrases and words, from "
+                    "Links between ayat, phrases and words. Similar ayah is computed from the quran.com text; themes and concepts come from "
                     a { href: "{QUL}", target: "_blank", rel: "noopener", "QUL ↗" }
                     ", quran.com's resource library. Divisions come from the "
                     a { href: "{API}", target: "_blank", rel: "noopener", "quran.com API ↗" }
@@ -108,8 +109,8 @@ fn List() -> Element {
                 ul { class: "items",
                     for it in RELATIONS {
                         li {
-                            class: if it.ready { "ready" } else { "soon" },
-                            onclick: move |_| if it.ready { go(&format!("{}/", it.slug)) },
+                            class: "ready",
+                            onclick: move |_| go(&format!("{}/", it.slug)),
                             div { class: "head",
                                 span { class: "name", "{it.name}" }
                                 span { class: "ar", dir: "rtl", "{it.arabic}" }
@@ -117,8 +118,7 @@ fn List() -> Element {
                             }
                             div { class: "meta", span { class: "scope", "{it.scope}" } "{it.about}" }
                             div { class: "foot",
-                                Source { href: format!("{QUL}/{}", it.slug) }
-                                if !it.ready { span { class: "tag", "Soon" } }
+                                Source { href: it.source }
                                 if it.experimental { span { class: "tag", "Experimental" } }
                             }
                         }
