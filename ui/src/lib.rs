@@ -53,19 +53,26 @@ pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(de
         (Layout::Three, false) => &LINES,
         (Layout::Three, true) => std::slice::from_ref(&LINES[line()]),
     };
-    // One line shown: it follows the selection, so a choice made by search or link stays in view.
+    // Folding keeps the line last selected or hovered; while folded it follows new selections (search, links).
     let line_of = move |f: Option<Focus>| {
         let at = f.map(|f| track::span_of(f).0).unwrap_or(0.0);
         LINES.iter().rposition(|&(a, _)| MUSHAF.juz[a].start <= at + 1e-3).unwrap_or(0)
     };
+    let mut last = use_signal(|| None::<Focus>);
+    use_effect(move || {
+        if let Some(f) = focus() {
+            last.set(Some(f));
+        }
+    });
     use_effect(move || {
         if let Some(f) = selected() {
+            last.set(Some(f));
             line.set(line_of(Some(f)));
         }
     });
     let fold = move |_| {
         if !collapsed() {
-            line.set(line_of(selected()));
+            line.set(line_of(*last.peek()));
         }
         collapsed.toggle();
     };
@@ -94,14 +101,8 @@ pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(de
             }
             if three {
                 div { class: "fold", dir: "ltr",
-                    if collapsed() {
-                        button { disabled: line() == 0, "data-tip": "Previous 10 juz", onclick: move |_| line -= 1, span { "‹" } }
-                    }
                     button { "data-tip": if collapsed() { "Show all three lines" } else { "Show one line" }, onclick: fold,
                         span { if collapsed() { "»" } else { "«" } }
-                    }
-                    if collapsed() {
-                        button { disabled: line() == 2, "data-tip": "Next 10 juz", onclick: move |_| line += 1, span { "›" } }
                     }
                 }
             }
