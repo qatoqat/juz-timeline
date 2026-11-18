@@ -248,21 +248,6 @@ pub fn Track(
                 div { class: "track-head", style: "right:{x(mid)}%", {head} }
             }
             if !detail {
-                div { class: "lane bmk",
-                    for (i, page, px, _) in bookmarks.iter().cloned() {
-                        b {
-                            key: "{i}",
-                            class: if i == active { "bm-handle active" } else { "bm-handle" },
-                            style: "right:{px}%",
-                            "data-bm": "{i}",
-                            "data-tip": "{bookmark_tip(page)}",
-                            oncontextmenu: move |e| open_menu(menu, &e, Target::Bookmark(i)),
-                            Bookmark {}
-                        }
-                    }
-                }
-            }
-            if !detail {
                 OverlayLane { lo, hi, detail: false }
             }
             div { class: "lane sajdah",
@@ -295,6 +280,21 @@ pub fn Track(
                         style: "right:calc({px}% + 2px)",
                         "data-tip": "Manzil {n + 1} (فمي بشوق) · starts {tip(MANZIL[n].0 as usize - 1)}",
                         "{c}"
+                    }
+                }
+            }
+            if !detail {
+                div { class: "lane bmk",
+                    for (i, page, px, _) in bookmarks.iter().cloned() {
+                        b {
+                            key: "{i}",
+                            class: if i == active { "bm-handle active" } else { "bm-handle" },
+                            style: "right:{px}%",
+                            "data-bm": "{i}",
+                            "data-tip": "{bookmark_tip(page)}",
+                            oncontextmenu: move |e| open_menu(menu, &e, Target::Bookmark(i)),
+                            Bookmark {}
+                        }
                     }
                 }
             }

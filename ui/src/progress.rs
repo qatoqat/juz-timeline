@@ -147,11 +147,11 @@ fn storage() -> Option<web_sys::Storage> {
     web_sys::window()?.local_storage().ok()?
 }
 
-fn load(key: &str) -> Option<String> {
+pub fn load(key: &str) -> Option<String> {
     storage()?.get_item(key).ok()?
 }
 
-fn store(key: &str, value: &str) {
+pub fn store(key: &str, value: &str) {
     if let Some(s) = storage() {
         let _ = s.set_item(key, value);
     }

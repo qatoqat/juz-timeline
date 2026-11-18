@@ -29,9 +29,13 @@ pub enum Focus {
     Hizb(usize),
 }
 
+const LAYOUT_KEY: &str = "quran-timeline:layout";
+/// The line shown when 3-line mode is folded to one; empty when unfolded.
+const FOLD_KEY: &str = "quran-timeline:fold";
+
 #[component]
 pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(default = VNode::empty())] extra: Element) -> Element {
-    let mut layout = use_signal(|| Layout::Three);
+    let mut layout = use_signal(|| if progress::load(LAYOUT_KEY).as_deref() == Some("full") { Layout::Full } else { Layout::Three });
     let focus = use_signal(|| None::<Focus>);
     let selected = use_signal(hash::read_focus);
     use_effect(move || hash::write_focus(selected()));
@@ -44,8 +48,13 @@ pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(de
             progress.drag_bookmark(usize::try_from(index).ok(), pos);
         }
     });
-    let mut collapsed = use_signal(|| false);
-    let mut line = use_signal(|| 0usize);
+    let saved_fold = progress::load(FOLD_KEY).and_then(|v| v.parse::<usize>().ok()).filter(|&n| n < 3);
+    let mut collapsed = use_signal(|| saved_fold.is_some());
+    let mut line = use_signal(|| saved_fold.unwrap_or(0));
+    use_effect(move || {
+        progress::store(LAYOUT_KEY, if layout() == Layout::Full { "full" } else { "three" });
+        progress::store(FOLD_KEY, &if collapsed() { line().to_string() } else { String::new() });
+    });
     const LINES: [(usize, usize); 3] = [(0, 10), (10, 20), (20, 30)];
     let three = layout() == Layout::Three;
     let rows: &[(usize, usize)] = match (layout(), collapsed()) {
