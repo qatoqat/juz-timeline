@@ -44,9 +44,30 @@ pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(de
             progress.drag_bookmark(usize::try_from(index).ok(), pos);
         }
     });
-    let rows: &[(usize, usize)] = match layout() {
-        Layout::Full => &[(0, 30)],
-        Layout::Three => &[(0, 10), (10, 20), (20, 30)],
+    let mut collapsed = use_signal(|| false);
+    let mut line = use_signal(|| 0usize);
+    const LINES: [(usize, usize); 3] = [(0, 10), (10, 20), (20, 30)];
+    let three = layout() == Layout::Three;
+    let rows: &[(usize, usize)] = match (layout(), collapsed()) {
+        (Layout::Full, _) => &[(0, 30)],
+        (Layout::Three, false) => &LINES,
+        (Layout::Three, true) => std::slice::from_ref(&LINES[line()]),
+    };
+    // One line shown: it follows the selection, so a choice made by search or link stays in view.
+    let line_of = move |f: Option<Focus>| {
+        let at = f.map(|f| track::span_of(f).0).unwrap_or(0.0);
+        LINES.iter().rposition(|&(a, _)| MUSHAF.juz[a].start <= at + 1e-3).unwrap_or(0)
+    };
+    use_effect(move || {
+        if let Some(f) = selected() {
+            line.set(line_of(Some(f)));
+        }
+    });
+    let fold = move |_| {
+        if !collapsed() {
+            line.set(line_of(selected()));
+        }
+        collapsed.toggle();
     };
     rsx! {
         style { {include_str!("../assets/main.css")} }
@@ -69,6 +90,19 @@ pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(de
                     detail: false,
                     ruku: false,
                     hizb,
+                }
+            }
+            if three {
+                div { class: "fold", dir: "ltr",
+                    if collapsed() {
+                        button { disabled: line() == 0, "data-tip": "Previous 10 juz", onclick: move |_| line -= 1, "↑" }
+                    }
+                    button { "data-tip": if collapsed() { "Show all three lines" } else { "Show one line" }, onclick: fold,
+                        if collapsed() { "⇊" } else { "⇈" }
+                    }
+                    if collapsed() {
+                        button { disabled: line() == 2, "data-tip": "Next 10 juz", onclick: move |_| line += 1, "↓" }
+                    }
                 }
             }
             Detail { focus, selected, ruku, extra }
