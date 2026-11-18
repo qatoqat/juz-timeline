@@ -345,7 +345,7 @@ pub fn Track(
                     i { class: line_class(kind, split), style }
                 }
                 for style in manzil_lines {
-                    i { class: "line edge", style }
+                    i { class: "line edge manzil", style }
                 }
             }
             div { class: "bar",
@@ -366,7 +366,7 @@ pub fn Track(
                     i { class: line_class(kind, split), style }
                 }
                 for style in manzil_juz {
-                    i { class: "line edge dotted", style }
+                    i { class: "line edge dotted manzil", style }
                 }
             }
             if !hizbs.is_empty() {
@@ -387,7 +387,7 @@ pub fn Track(
                         i { class: line_class(kind, split), style }
                     }
                     for style in manzil_hizb.iter().cloned() {
-                        i { class: "line edge dotted", style }
+                        i { class: "line edge dotted manzil", style }
                     }
                 }
             }
