@@ -108,6 +108,7 @@ pub fn Track(
     detail: bool,
     ruku: bool,
     #[props(default)] hizb: bool,
+    #[props(default = VNode::empty())] head: Element,
 ) -> Element {
     let mut width = use_signal(|| 1200.0f32);
     let m = &*MUSHAF;
@@ -242,6 +243,10 @@ pub fn Track(
             "data-lo": "{lo}",
             "data-hi": "{hi}",
             onresize: move |e| if let Ok(sz) = e.get_content_box_size() { width.set(sz.width as f32) },
+            // `head` sits on the line that halves the track (end of juz 5, 15 or 25), wherever its pages put it.
+            if let Some(mid) = mids.iter().map(|&(p, _)| p).find(|&p| p > lo + EPS && p < hi - EPS) {
+                div { class: "track-head", style: "right:{x(mid)}%", {head} }
+            }
             if !detail {
                 div { class: "lane bmk",
                     for (i, page, px, _) in bookmarks.iter().cloned() {

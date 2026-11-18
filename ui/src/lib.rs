@@ -76,6 +76,17 @@ pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(de
         }
         collapsed.toggle();
     };
+    let head = if three && collapsed() {
+        rsx! {
+            div { class: "lines-nav", dir: "ltr",
+                button { class: if line() == 2 { "gone" }, disabled: line() == 2, "data-tip": "Next 10 juz", onclick: move |_| line += 1, "‹" }
+                span { "{LINES[line()].1}–{LINES[line()].0 + 1}" }
+                button { class: if line() == 0 { "gone" }, disabled: line() == 0, "data-tip": "Previous 10 juz", onclick: move |_| line -= 1, "›" }
+            }
+        }
+    } else {
+        VNode::empty()
+    };
     rsx! {
         style { {include_str!("../assets/main.css")} }
         main { dir: "rtl",
@@ -85,13 +96,6 @@ pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(de
                 div { class: "toggle", dir: "ltr",
                     button { class: if layout() == Layout::Full { "on" }, onclick: move |_| layout.set(Layout::Full), "Full 1–30" }
                     button { class: if layout() == Layout::Three { "on" }, onclick: move |_| layout.set(Layout::Three), "3 lines × 10 juz" }
-                }
-            }
-            if three && collapsed() {
-                div { class: "lines-nav", dir: "ltr",
-                    button { class: if line() == 2 { "gone" }, disabled: line() == 2, "data-tip": "Next 10 juz", onclick: move |_| line += 1, "‹" }
-                    span { "{LINES[line()].1}–{LINES[line()].0 + 1}" }
-                    button { class: if line() == 0 { "gone" }, disabled: line() == 0, "data-tip": "Previous 10 juz", onclick: move |_| line -= 1, "›" }
                 }
             }
             for &(a, b) in rows {
@@ -104,6 +108,7 @@ pub fn Page(title: Element, ruku: bool, #[props(default)] hizb: bool, #[props(de
                     detail: false,
                     ruku: false,
                     hizb,
+                    head: head.clone(),
                 }
             }
             if three {
